@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Tüm Tahminler - Yönetim Paneli{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-list me-2"></i>Tüm Tahminler</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Yenile
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if tahminler %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Kullanıcı</th>
+                            <th>Maç</th>
+                            <th>Tahmin</th>
+                            <th>Gerçek Skor</th>
+                            <th>Durum</th>
+                            <th>Tarih</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tahmin in tahminler %}
+                        <tr class="{{ 'table-success' if tahmin[5] and tahmin[3] == tahmin[5] else '' }}">
+                            <td><strong>#{{ tahmin[0] }}</strong></td>
+                            <td>
+                                <i class="fab fa-discord me-1"></i>
+                                <strong>{{ tahmin[1] }}</strong>
+                            </td>
+                            <td>{{ tahmin[2] }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ tahmin[3] }}</span>
+                            </td>
+                            <td>
+                                {% if tahmin[5] %}
+                                    <span class="badge bg-success">{{ tahmin[5] }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Bekleniyor</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if tahmin[5] and tahmin[3] == tahmin[5] %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Doğru
+                                    </span>
+                                {% elif tahmin[5] %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i>Yanlış
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock me-1"></i>Beklemede
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ tahmin[4][:16] if tahmin[4] else 'Bilinmiyor' }}</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-list fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">Henüz tahmin yapılmamış</h4>
+                <p class="text-muted">Discord botundan tahmin yapılmaya başlandığında burada görünecek.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

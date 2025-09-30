@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ mac[1] }} - Kazananları Belirle{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-trophy me-2"></i>Kazananları Belirle</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('mac_tahminleri', mac_id=mac[0]) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Tahminlere Dön
+        </a>
+    </div>
+</div>
+
+<!-- Maç Özeti -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card bg-success bg-opacity-10">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-1">{{ mac[1] }}</h4>
+                        <p class="mb-0">
+                            <strong>{{ mac[2] }}</strong> vs <strong>{{ mac[3] }}</strong>
+                            - Gerçek Skor: <span class="badge bg-success">{{ mac[5] }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <h5 class="text-success mb-0">{{ dogru_tahmin_sayisi }} Doğru Tahmin</h5>
+                        <small class="text-muted">{{ toplam_tahmin }} tahmin içinden</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if dogru_tahminler %}
+    <!-- Doğru Tahmin Yapanlar -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Doğru Tahmin Yapanlar</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Sıra</th>
+                            <th>Discord Kullanıcısı</th>
+                            <th>Tahmin</th>
+                            <th>Tahmin Tarihi</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tahmin in dogru_tahminler %}
+                        <tr class="table-success">
+                            <td><strong>{{ loop.index }}</strong></td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fab fa-discord text-primary me-2"></i>
+                                    <strong>{{ tahmin[1] }}</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-success fs-6">{{ tahmin[3] }}</span>
+                            </td>
+                            <td>
+                                <small>{{ tahmin[4][:16] if tahmin[4] else 'Bilinmiyor' }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">
+                                    <i class="fas fa-trophy me-1"></i>Kazandı
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kazanan Belirleme Formu -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Kazanan Belirleme Seçenekleri</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6><i class="fas fa-users me-2"></i>Tüm Doğru Tahmin Yapanlar</h6>
+                                <p class="text-muted">{{ dogru_tahmin_sayisi }} kişinin hepsi kazanan olarak işaretlenir.</p>
+                                <button type="submit" name="secim" value="hepsi" class="btn btn-success">
+                                    <i class="fas fa-trophy me-2"></i>Hepsini Kazanan Yap
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6><i class="fas fa-dice me-2"></i>Rastgele Çekiliş</h6>
+                                <p class="text-muted">Doğru tahmin yapanlar arasından rastgele 1 kişi seçilir.</p>
+                                <button type="submit" name="secim" value="cekilis" class="btn btn-warning">
+                                    <i class="fas fa-dice me-2"></i>Çekiliş Yap
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if dogru_tahmin_sayisi > 3 %}
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="card bg-info bg-opacity-10">
+                            <div class="card-body">
+                                <h6><i class="fas fa-filter me-2"></i>Özel Seçim</h6>
+                                <p class="text-muted">Belirli sayıda kazanan seçmek istiyorsanız:</p>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Kazanan Sayısı:</label>
+                                        <input type="number" class="form-control" name="kazanan_sayisi" 
+                                               min="1" max="{{ dogru_tahmin_sayisi }}" value="1">
+                                    </div>
+                                    <div class="col-md-8 d-flex align-items-end">
+                                        <button type="submit" name="secim" value="ozel" class="btn btn-info">
+                                            <i class="fas fa-random me-2"></i>Belirtilen Sayıda Çekiliş Yap
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+{% else %}
+    <!-- Doğru Tahmin Yok -->
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-times-circle fa-4x text-danger mb-3"></i>
+            <h4 class="text-danger">Doğru Tahmin Yapan Yok</h4>
+            <p class="text-muted">Bu maç için hiç kimse doğru tahmin yapmamış.</p>
+            <a href="{{ url_for('maclar') }}" class="btn btn-primary">
+                <i class="fas fa-arrow-left me-2"></i>Maçlara Dön
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

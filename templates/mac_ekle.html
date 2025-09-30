@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Yeni Maç Ekle - Yönetim Paneli{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-plus me-2"></i>Yeni Maç Ekle</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('maclar') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Geri Dön
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-futbol me-2"></i>Maç Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="takim1" class="form-label">Ev Sahibi Takım</label>
+                            <input type="text" class="form-control" id="takim1" name="takim1" required>
+                            <div class="form-text">Örnek: Galatasaray</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="takim2" class="form-label">Deplasman Takımı</label>
+                            <input type="text" class="form-control" id="takim2" name="takim2" required>
+                            <div class="form-text">Örnek: Fenerbahçe</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="mac_tarihi" class="form-label">Maç Tarihi ve Saati</label>
+                        <input type="datetime-local" class="form-control" id="mac_tarihi" name="mac_tarihi">
+                        <div class="form-text">Maç tarihini belirtmek isteğe bağlıdır</div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="reset" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-undo me-2"></i>Temizle
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Maçı Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Bilgilendirme</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Maç adı otomatik oluşturulur
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Discord botunda tahmin alınmaya başlar
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Maç bittikten sonra skoru girebilirsiniz
+                    </li>
+                    <li>
+                        <i class="fas fa-check text-success me-2"></i>
+                        Kazananlar otomatik belirlenir
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Set default datetime to now + 2 hours
+document.addEventListener('DOMContentLoaded', function() {
+    const now = new Date();
+    now.setHours(now.getHours() + 2);
+    const dateTimeString = now.toISOString().slice(0, 16);
+    document.getElementById('mac_tarihi').value = dateTimeString;
+});
+</script>
+{% endblock %}

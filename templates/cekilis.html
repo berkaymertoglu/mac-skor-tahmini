@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Çekiliş Yap - {{ mac_adi }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .kazanan-card { border-left: 4px solid #28a745; }
+        .kaybeden-card { border-left: 4px solid #dc3545; }
+        .bekleyen-card { border-left: 4px solid #ffc107; }
+        .otomatik-card { border-left: 4px solid #17a2b8; }
+        .cekilis-form { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-trophy"></i> Tahmin Paneli
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('maclar') }}">
+                    <i class="fas fa-arrow-left"></i> Maçlar
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Başlık -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="fas fa-dice"></i> Çekiliş Yap</h2>
+                <p class="text-muted">{{ mac_adi }}</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Çekiliş Formu -->
+            <div class="col-md-6 mb-4">
+                <div class="cekilis-form">
+                    <h4><i class="fas fa-magic"></i> Çekiliş Ayarları</h4>
+                    <hr style="border-color: rgba(255,255,255,0.3);">
+                    
+                    <div class="stats-card p-3 mb-3">
+                        <div class="row text-center">
+                            <div class="col">
+                                <h3>{{ uygun_kazanan_sayisi }}</h3>
+                                <small>Çekiliş İçin Uygun</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if uygun_kazanan_sayisi > 0 %}
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-users"></i> Kaç Kişi Seçilsin?
+                                </label>
+                                <input type="number" 
+                                       name="kazanan_sayisi" 
+                                       class="form-control form-control-lg" 
+                                       min="1" 
+                                       max="{{ uygun_kazanan_sayisi }}" 
+                                       value="1" 
+                                       required>
+                                <div class="form-text text-light">
+                                    Maksimum {{ uygun_kazanan_sayisi }} kişi seçebilirsiniz
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-warning btn-lg w-100">
+                                <i class="fas fa-dice"></i> Çekilişi Başlat
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Çekiliş için uygun kazanan bulunmuyor!
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Kazananlar Listesi -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5><i class="fas fa-list"></i> Mevcut Kazananlar</h5>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                        {% if tum_kazananlar %}
+                            {% for kazanan in tum_kazananlar %}
+                                <div class="p-3 border-bottom 
+                                    {% if kazanan[1] == 'kazandi' %}kazanan-card
+                                    {% elif kazanan[1] == 'kaybetti' %}kaybeden-card
+                                    {% elif kazanan[1] == 'otomatik' %}otomatik-card
+                                    {% else %}bekleyen-card{% endif %}">
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>@{{ kazanan[0] }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ kazanan[2] }}</small>
+                                        </div>
+                                        <div>
+                                            {% if kazanan[1] == 'kazandi' %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-trophy"></i> Kazandı
+                                                </span>
+                                            {% elif kazanan[1] == 'kaybetti' %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times"></i> Kaybetti
+                                                </span>
+                                            {% elif kazanan[1] == 'otomatik' %}
+                                                <span class="badge bg-info">
+                                                    <i class="fas fa-robot"></i> Otomatik
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-clock"></i> Beklemede
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="p-4 text-center text-muted">
+                                <i class="fas fa-users-slash fa-3x mb-3"></i>
+                                <p>Henüz kazanan bulunmuyor</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geri Dön -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <a href="{{ url_for('kazananlar', mac_id=mac_id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Kazananlar Listesine Dön
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Maç Skor Tahmini{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Yenile
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- İstatistik Kartları -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card bg-primary text-white">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Aktif Maçlar</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ stats.aktif_maclar }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-futbol fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card bg-success text-white">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Toplam Tahmin</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ stats.toplam_tahminler }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card bg-info text-white">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Katılımcılar</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ stats.toplam_kullanicilar }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card bg-warning text-white">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Kazananlar</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ stats.toplam_kazananlar }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-trophy fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Son Maçlar -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Son Eklenen Maçlar</h5>
+                <a href="{{ url_for('maclar') }}" class="btn btn-sm btn-primary">Tümünü Gör</a>
+            </div>
+            <div class="card-body">
+                {% if son_maclar %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Maç</th>
+                                    <th>Takımlar</th>
+                                    <th>Tarih</th>
+                                    <th>Gerçek Skor</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mac in son_maclar %}
+                                <tr>
+                                    <td><strong>{{ mac[1] }}</strong></td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ mac[2] }}</span>
+                                        <span class="mx-2">VS</span>
+                                        <span class="badge bg-light text-dark">{{ mac[3] }}</span>
+                                    </td>
+                                    <td>
+                                        {% if mac[4] %}
+                                            {{ mac[4][:16] }}
+                                        {% else %}
+                                            <span class="text-muted">Belirtilmemiş</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if mac[5] %}
+                                            <span class="badge bg-success">{{ mac[5] }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Bekleniyor</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if mac[6] == 'aktif' %}
+                                            <span class="badge bg-success">Aktif</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ mac[6] }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('mac_tahminleri', mac_id=mac[0]) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('mac_duzenle', mac_id=mac[0]) }}" class="btn btn-sm btn-outline-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-futbol fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Henüz maç eklenmemiş.</p>
+                        <a href="{{ url_for('mac_ekle') }}" class="btn btn-primary">İlk Maçı Ekle</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto refresh stats every 30 seconds
+setInterval(function() {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            // Update stats if needed
+            console.log('Stats updated:', data);
+        });
+}, 30000);
+</script>
+{% endblock %}

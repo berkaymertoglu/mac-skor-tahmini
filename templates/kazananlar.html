@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Kazananlar - Yönetim Paneli{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-trophy me-2"></i>Kazananlar</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Yenile
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toplam Kazanan Sayısı -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h2>{{ toplam_kazanan }}</h2>
+                <p class="mb-0"><i class="fas fa-trophy me-2"></i>Toplam Kazanan</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Çekiliş Bölümü -->
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="fas fa-dice me-2"></i>Çekiliş Yap</h5>
+    </div>
+    <div class="card-body">
+        {% if toplam_kazanan > 0 %}
+            <form method="POST" action="{{ url_for('cekilis_yap_genel') }}">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="flex: 0 0 200px;">
+                        <label class="form-label mb-1">Kaç Kişi Seçilsin?</label>
+                        <input type="number" 
+                               name="kazanan_sayisi" 
+                               class="form-control" 
+                               min="1" 
+                               max="{{ toplam_kazanan }}" 
+                               value="1" 
+                               required>
+                        <small class="text-muted">Maksimum {{ toplam_kazanan }} kişi</small>
+                    </div>
+                    <div style="flex: 0 0 auto; margin-top: 1px;">
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="fas fa-dice me-2"></i>Çekilişi Başlat
+                        </button>
+                    </div>
+                </div>
+            </form>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Henüz kazanan yok, çekiliş yapılamaz!
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Çekiliş Sonuçları -->
+{% if cekilis_sonucu %}
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Son Çekiliş Sonuçları</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for kazanan in cekilis_sonucu %}
+            <div class="col-md-4 mb-2">
+                <div class="alert alert-success mb-2">
+                    <i class="fab fa-discord me-2"></i><strong>@{{ kazanan.username }}</strong>
+                    <br><small class="text-muted">{{ kazanan.mac_adi }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tüm Kazananlar Listesi -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Tüm Kazananlar</h5>
+    </div>
+    <div class="card-body">
+        {% if kazananlar %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Kullanıcı</th>
+                            <th>Maç</th>
+                            <th>Tahmin</th>
+                            <th>Gerçek Skor</th>
+                            <th>Tarih</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for kazanan in kazananlar %}
+                        <tr>
+                            <td><strong>{{ loop.index }}</strong></td>
+                            <td>
+                                <i class="fab fa-discord text-primary me-2"></i>
+                                <strong>{{ kazanan[1] }}</strong>
+                            </td>
+                            <td>{{ kazanan[2] }}</td>
+                            <td><span class="badge bg-success">{{ kazanan[3] }}</span></td>
+                            <td><span class="badge bg-primary">{{ kazanan[4] }}</span></td>
+                            <td>
+                                <small class="text-muted">
+                                    {% if kazanan[5] %}
+                                        {{ kazanan[5][:16] }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-trophy fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">Henüz kazanan yok</h4>
+                <p class="text-muted">Maçlar tamamlandıkça kazananlar burada görünecek.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
