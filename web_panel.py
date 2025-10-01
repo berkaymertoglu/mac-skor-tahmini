@@ -564,28 +564,34 @@ def kazananlar():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Toplam kazanan sayısı
-    cursor.execute('SELECT COUNT(*) FROM kazananlar')
-    toplam_kazanan = cursor.fetchone()['count']
-    
-    # Tüm kazananları getir
+    # Kazananları getir - tahminler tablosundaki tarih alanını dahil et
     cursor.execute('''
-        SELECT k.id, k.username, m.mac_adi, k.dogru_tahmin, m.gercek_skor, k.kazanma_tarihi
-        FROM kazananlar k
-        JOIN maclar m ON k.mac_id = m.id
-        ORDER BY k.kazanma_tarihi DESC
+        SELECT 
+            t.id,
+            t.username,
+            t.mac_adi,
+            t.skor_tahmini as dogru_tahmin,
+            m.gercek_skor,
+            t.tarih as tahmin_tarihi,  -- Bu satır eklendi
+            m.mac_tarihi
+        FROM tahminler t
+        LEFT JOIN maclar m ON t.mac_adi = m.mac_adi
+        WHERE m.gercek_skor IS NOT NULL 
+        AND t.skor_tahmini = m.gercek_skor
+        ORDER BY t.tarih DESC
     ''')
-    kazananlar_listesi = cursor.fetchall()
+    
+    kazananlar_list = cursor.fetchall()
+    
+    # Toplam kazanan sayısı
+    toplam_kazanan = len(kazananlar_list)
     
     conn.close()
     
-    # Çekiliş sonucunu session'dan al
-    cekilis_sonucu = session.pop('cekilis_sonucu', None)
-    
-    return render_template('kazananlar.html',
-                         toplam_kazanan=toplam_kazanan,
-                         kazananlar=kazananlar_listesi,
-                         cekilis_sonucu=cekilis_sonucu)
+    return render_template('kazananlar.html', 
+                         kazananlar=kazananlar_list, 
+                         toplam_kazanan=toplam_kazanan)
+
 
 @app.route('/cekilis_yap_genel', methods=['POST'])
 def cekilis_yap_genel():
