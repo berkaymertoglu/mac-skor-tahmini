@@ -6,9 +6,14 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <h1 class="h2"><i class="fas fa-futbol me-2"></i>Maçlar</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{{ url_for('mac_ekle') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Yeni Maç Ekle
-        </a>
+        <div class="btn-group me-2">
+            <a href="{{ url_for('mac_ekle') }}" class="btn btn-sm btn-success">
+                <i class="fas fa-plus"></i> Yeni Maç Ekle
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Yenile
+            </button>
+        </div>
     </div>
 </div>
 
@@ -20,9 +25,9 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Maç Adı</th>
+                            <th>Maç</th>
                             <th>Takımlar</th>
-                            <th>Tarih</th>
+                            <th>Maç Tarihi</th>
                             <th>Gerçek Skor</th>
                             <th>Durum</th>
                             <th>Tahmin Sayısı</th>
@@ -31,65 +36,82 @@
                     </thead>
                     <tbody>
                         {% for mac in maclar %}
-                        <tr>
-                            <td><strong>#{{ mac['id'] }}</strong></td>
-                            <td>{{ mac['mac_adi'] }}</td>
+                        <tr class="{{ 'table-success' if mac.gercek_skor else 'table-warning' if mac.durum == 'aktif' else '' }}">
+                            <td><strong>#{{ mac.id }}</strong></td>
                             <td>
-                                <span class="badge bg-light text-dark me-1">{{ mac['takim1'] }}</span>
-                                <span class="text-muted">VS</span>
-                                <span class="badge bg-light text-dark ms-1">{{ mac['takim2'] }}</span>
+                                <strong>{{ mac.mac_adi }}</strong>
                             </td>
                             <td>
-                                {% if mac['tarih'] %}
-                                    <small>{{ mac['tarih'].strftime('%d.%m.%Y %H:%M') }}</small>
+                                <span class="badge bg-primary me-1">{{ mac.takim1 }}</span>
+                                <span class="text-muted">vs</span>
+                                <span class="badge bg-info ms-1">{{ mac.takim2 }}</span>
+                            </td>
+                            <td>
+                                {% if mac.mac_tarihi %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar-alt me-1"></i>
+                                        {{ mac.mac_tarihi.strftime('%d.%m.%Y') if mac.mac_tarihi.strftime else mac.mac_tarihi[:10] }}
+                                        <br>
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ mac.mac_tarihi.strftime('%H:%M') if mac.mac_tarihi.strftime else mac.mac_tarihi[11:16] }}
+                                    </small>
                                 {% else %}
-                                    <span class="text-muted">Belirtilmemiş</span>
+                                    <span class="text-muted">Tarih Girilmemiş</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if mac['skor'] %}
-                                    <span class="badge bg-success">{{ mac['skor'] }}</span>
+                                {% if mac.gercek_skor %}
+                                    <span class="badge bg-success fs-6">{{ mac.gercek_skor }}</span>
                                 {% else %}
-                                    <span class="badge bg-warning">Bekleniyor</span>
+                                    <span class="badge bg-secondary">Bekleniyor</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if mac['durum'] == 'aktif' %}
-                                    <span class="badge bg-success">Aktif</span>
-                                {% elif mac['durum'] == 'bitti' %}
-                                    <span class="badge bg-secondary">Bitti</span>
+                                {% if mac.durum == 'aktif' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-play me-1"></i>Aktif
+                                    </span>
+                                {% elif mac.durum == 'tamamlandi' %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-check me-1"></i>Tamamlandı
+                                    </span>
+                                {% elif mac.durum == 'iptal' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i>İptal
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-info">{{ mac['durum'] }}</span>
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-question me-1"></i>{{ mac.durum|title }}
+                                    </span>
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge bg-primary">{{ mac['tahmin_sayisi'] or 0 }} tahmin</span>
+                                {% if mac.tahmin_sayisi > 0 %}
+                                    <a href="{{ url_for('mac_tahminleri', mac_id=mac.id) }}" class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-users me-1"></i>{{ mac.tahmin_sayisi }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">0</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('mac_tahminleri', mac_id=mac['id']) }}" 
-                                       class="btn btn-sm btn-outline-info" title="Tahminleri Gör">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{{ url_for('mac_duzenle', mac_id=mac['id']) }}" 
-                                       class="btn btn-sm btn-outline-warning" title="Düzenle">
+                                    <a href="{{ url_for('mac_duzenle', mac_id=mac.id) }}" 
+                                       class="btn btn-sm btn-outline-primary" title="Düzenle">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    {% if mac['skor'] %}
-                                        <a href="{{ url_for('kazananlari_belirle', mac_id=mac['id']) }}" 
+                                    {% if mac.gercek_skor %}
+                                        <a href="{{ url_for('kazananlari_belirle', mac_id=mac.id) }}" 
                                            class="btn btn-sm btn-outline-success" title="Kazananları Belirle">
                                             <i class="fas fa-trophy"></i>
                                         </a>
                                     {% endif %}
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-danger" 
-                                            title="Maçı Sil"
-                                            data-mac-adi="{{ mac['mac_adi'] }}"
-                                            data-mac-id="{{ mac['id'] }}"
-                                            data-tahmin-sayisi="{{ mac['tahmin_sayisi'] or 0 }}"
-                                            onclick="confirmDelete(this)">
+                                    <a href="{{ url_for('mac_sil', mac_id=mac.id) }}" 
+                                       class="btn btn-sm btn-outline-danger" 
+                                       title="Sil"
+                                       onclick="return confirm('Bu maçı silmek istediğinizden emin misiniz? Tüm tahminler de silinecek!')">
                                         <i class="fas fa-trash"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </td>
                         </tr>
@@ -101,8 +123,8 @@
             <div class="text-center py-5">
                 <i class="fas fa-futbol fa-4x text-muted mb-3"></i>
                 <h4 class="text-muted">Henüz maç eklenmemiş</h4>
-                <p class="text-muted">İlk maçınızı ekleyerek başlayın!</p>
-                <a href="{{ url_for('mac_ekle') }}" class="btn btn-primary">
+                <p class="text-muted">İlk maçınızı eklemek için yukarıdaki "Yeni Maç Ekle" butonunu kullanın.</p>
+                <a href="{{ url_for('mac_ekle') }}" class="btn btn-success">
                     <i class="fas fa-plus me-2"></i>İlk Maçı Ekle
                 </a>
             </div>
@@ -110,60 +132,41 @@
     </div>
 </div>
 
-<!-- Silme Onay Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">
-                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Maçı Sil
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Maç İstatistikleri -->
+{% if maclar %}
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h3>{{ maclar|selectattr('durum', 'equalto', 'aktif')|list|length }}</h3>
+                <p class="mb-0">Aktif Maçlar</p>
             </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    <i class="fas fa-warning me-2"></i>
-                    <strong>Dikkat!</strong> Bu işlem geri alınamaz.
-                </div>
-                <p><strong id="macAdi"></strong> maçını silmek istediğinizden emin misiniz?</p>
-                <div class="text-muted small">
-                    <ul class="mb-0">
-                        <li><span id="tahminSayisi"></span> tahmin silinecek</li>
-                        <li>İlişkili tüm kazanan kayıtları silinecek</li>
-                        <li>Bu işlem geri alınamaz</li>
-                    </ul>
-                </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3>{{ maclar|selectattr('gercek_skor')|list|length }}</h3>
+                <p class="mb-0">Tamamlanan Maçlar</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>İptal
-                </button>
-                <a href="#" id="deleteButton" class="btn btn-danger">
-                    <i class="fas fa-trash me-2"></i>Evet, Sil
-                </a>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h3>{{ maclar|sum(attribute='tahmin_sayisi') }}</h3>
+                <p class="mb-0">Toplam Tahmin</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h3>{{ maclar|length }}</h3>
+                <p class="mb-0">Toplam Maç</p>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-function confirmDelete(button) {
-    // Button'dan data attribute'larını al
-    const macAdi = button.getAttribute('data-mac-adi');
-    const macId = button.getAttribute('data-mac-id');
-    const tahminSayisi = button.getAttribute('data-tahmin-sayisi');
-    
-    // Modal içeriğini güncelle
-    document.getElementById('macAdi').textContent = macAdi;
-    document.getElementById('tahminSayisi').textContent = tahminSayisi;
-    
-    // Silme URL'ini manuel oluştur
-    const deleteUrl = '/mac_sil/' + macId;
-    document.getElementById('deleteButton').href = deleteUrl;
-    
-    // Modal'ı göster
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
-}
-</script>
+{% endif %}
 {% endblock %}
