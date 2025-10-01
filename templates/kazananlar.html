@@ -107,13 +107,17 @@
                             <td><strong>{{ loop.index }}</strong></td>
                             <td>
                                 <i class="fab fa-discord text-primary me-2"></i>
-                                <strong>{{ kazanan.username or kazanan[1] or '-' }}</strong>
+                                <strong>
+                                    {% if kazanan.username %}
+                                        {{ kazanan.username }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </strong>
                             </td>
                             <td>
                                 {% if kazanan.mac_adi %}
                                     {{ kazanan.mac_adi }}
-                                {% elif kazanan[2] %}
-                                    {{ kazanan[2] }}
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}
@@ -121,8 +125,6 @@
                             <td>
                                 {% if kazanan.dogru_tahmin %}
                                     <span class="badge bg-success">{{ kazanan.dogru_tahmin }}</span>
-                                {% elif kazanan[3] %}
-                                    <span class="badge bg-success">{{ kazanan[3] }}</span>
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}
@@ -130,8 +132,6 @@
                             <td>
                                 {% if kazanan.gercek_skor %}
                                     <span class="badge bg-primary">{{ kazanan.gercek_skor }}</span>
-                                {% elif kazanan[4] %}
-                                    <span class="badge bg-primary">{{ kazanan[4] }}</span>
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}
@@ -139,15 +139,9 @@
                             <td>
                                 <small class="text-muted">
                                     {% if kazanan.mac_tarihi %}
-                                        {% if kazanan.mac_tarihi|string %}
-                                            {{ kazanan.mac_tarihi|string[:16] }}
-                                        {% else %}
-                                            {{ kazanan.mac_tarihi.strftime('%d.%m.%Y %H:%M') if kazanan.mac_tarihi.strftime else kazanan.mac_tarihi }}
-                                        {% endif %}
-                                    {% elif kazanan[5] %}
-                                        {{ kazanan[5][:16] if kazanan[5]|string else kazanan[5] }}
+                                        {{ kazanan.mac_tarihi.strftime('%d.%m.%Y %H:%M') if kazanan.mac_tarihi else '-' }}
                                     {% else %}
-                                        <span class="text-muted">-</span>
+                                        -
                                     {% endif %}
                                 </small>
                             </td>
@@ -176,7 +170,7 @@
         <small>
             <strong>Kazanan Sayısı:</strong> {{ kazananlar|length if kazananlar else 0 }}<br>
             {% if kazananlar and kazananlar|length > 0 %}
-                <strong>İlk Kazanan Yapısı:</strong> {{ kazananlar[0]|string }}<br>
+                <strong>İlk Kazanan:</strong> {{ kazananlar[0] }}<br>
                 <strong>Veri Tipi:</strong> {{ kazananlar[0].__class__.__name__ }}
             {% endif %}
         </small>
