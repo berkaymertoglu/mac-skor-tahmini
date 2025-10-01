@@ -9,7 +9,7 @@
         <a href="{{ url_for('maclar') }}" class="btn btn-secondary me-2">
             <i class="fas fa-arrow-left me-2"></i>Geri Dön
         </a>
-        <a href="{{ url_for('mac_tahminleri', mac_id=mac[0]) }}" class="btn btn-info">
+        <a href="{{ url_for('mac_tahminleri', mac_id=mac.id) }}" class="btn btn-info">
             <i class="fas fa-eye me-2"></i>Tahminleri Gör
         </a>
     </div>
@@ -19,7 +19,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-futbol me-2"></i>{{ mac[1] }} - Düzenle</h5>
+                <h5 class="mb-0"><i class="fas fa-futbol me-2"></i>{{ mac.mac_adi or 'Maç' }} - Düzenle</h5>
             </div>
             <div class="card-body">
                 <form method="POST">
@@ -27,35 +27,35 @@
                         <div class="col-md-6 mb-3">
                             <label for="takim1" class="form-label">Ev Sahibi Takım</label>
                             <input type="text" class="form-control" id="takim1" name="takim1" 
-                                   value="{{ mac[2] }}" required>
+                                   value="{{ mac.takim1 or '' }}" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="takim2" class="form-label">Deplasman Takımı</label>
                             <input type="text" class="form-control" id="takim2" name="takim2" 
-                                   value="{{ mac[3] }}" required>
+                                   value="{{ mac.takim2 or '' }}" required>
                         </div>
                     </div>
                     
                     <div class="mb-3">
                         <label for="mac_tarihi" class="form-label">Maç Tarihi ve Saati</label>
                         <input type="datetime-local" class="form-control" id="mac_tarihi" name="mac_tarihi"
-                               value="{{ mac[4][:16] if mac[4] else '' }}">
+                               value="{% if mac.tarih %}{{ mac.tarih.strftime('%Y-%m-%dT%H:%M') if mac.tarih.strftime else mac.tarih[:16] }}{% endif %}">
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="gercek_skor" class="form-label">Gerçek Skor</label>
                             <input type="text" class="form-control" id="gercek_skor" name="gercek_skor" 
-                                   value="{{ mac[5] if mac[5] else '' }}" placeholder="Örnek: 2-1">
+                                   value="{{ mac.gercek_skor or '' }}" placeholder="Örnek: 2-1">
                             <div class="form-text">Maç bittikten sonra gerçek skoru girin</div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="durum" class="form-label">Maç Durumu</label>
                             <select class="form-select" id="durum" name="durum">
-                                <option value="aktif" {{ 'selected' if mac[6] == 'aktif' else '' }}>Aktif</option>
-                                <option value="bitti" {{ 'selected' if mac[6] == 'bitti' else '' }}>Bitti</option>
-                                <option value="iptal" {{ 'selected' if mac[6] == 'iptal' else '' }}>İptal</option>
-                                <option value="ertelendi" {{ 'selected' if mac[6] == 'ertelendi' else '' }}>Ertelendi</option>
+                                <option value="aktif" {{ 'selected' if mac.durum == 'aktif' else '' }}>Aktif</option>
+                                <option value="bitti" {{ 'selected' if mac.durum == 'bitti' else '' }}>Bitti</option>
+                                <option value="iptal" {{ 'selected' if mac.durum == 'iptal' else '' }}>İptal</option>
+                                <option value="ertelendi" {{ 'selected' if mac.durum == 'ertelendi' else '' }}>Ertelendi</option>
                             </select>
                         </div>
                     </div>
@@ -93,12 +93,12 @@
             </div>
         </div>
 
-        {% if mac[5] %}
+        {% if mac.gercek_skor %}
         <div class="card mt-3 bg-success bg-opacity-10">
             <div class="card-body text-center">
                 <h6><i class="fas fa-trophy me-2"></i>Maç Sonuçlandı</h6>
-                <p class="mb-2">Gerçek Skor: <strong>{{ mac[5] }}</strong></p>
-                <a href="{{ url_for('kazananlari_belirle', mac_id=mac[0]) }}" class="btn btn-success btn-sm">
+                <p class="mb-2">Gerçek Skor: <strong>{{ mac.gercek_skor }}</strong></p>
+                <a href="{{ url_for('kazananlari_belirle', mac_id=mac.id) }}" class="btn btn-success btn-sm">
                     <i class="fas fa-trophy me-2"></i>Kazananları Belirle
                 </a>
             </div>
