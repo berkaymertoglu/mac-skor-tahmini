@@ -49,15 +49,34 @@ def check_group_permission(func):
     return wrapper
 
 async def send_log(context: ContextTypes.DEFAULT_TYPE, message: str):
-    """Log kanalına mesaj gönder"""
+    """Log kanalına mesaj gönder - DEBUG VERSİYONU"""
+    print(f"🔍 send_log çağrıldı! Kanal: {LOG_CHANNEL_ID}")
     try:
-        await context.bot.send_message(
+        log_message = f"🤖 **BOT LOG**\n\n{message}\n\n⏰ {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}"
+        print(f"📝 Gönderilecek mesaj: {log_message[:100]}...")
+        
+        result = await context.bot.send_message(
             chat_id=LOG_CHANNEL_ID,
-            text=message,
+            text=log_message,
             parse_mode='Markdown'
         )
+        print(f"✅ Log başarıyla gönderildi! Message ID: {result.message_id}")
+        
     except Exception as e:
+        print(f"❌ HATA DETAYI: {str(e)}")
+        print(f"❌ Hata tipi: {type(e).__name__}")
         logging.error(f"Log gönderilemedi: {e}")
+        
+        # Yedek olarak ana gruba gönder
+        try:
+            await context.bot.send_message(
+                chat_id=ALLOWED_GROUP_ID,
+                text=f"⚠️ **LOG HATASI:** {str(e)}\n\n{message}",
+                parse_mode='Markdown'
+            )
+            print("✅ Yedek mesaj ana gruba gönderildi")
+        except Exception as backup_error:
+            print(f"❌ Yedek mesaj da gönderilemedi: {backup_error}")
 
 def get_db_connection():
     """PostgreSQL bağlantısı"""
