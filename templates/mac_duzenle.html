@@ -40,7 +40,13 @@
                         <label for="mac_tarihi" class="form-label">Maç Tarihi ve Saati</label>
                         <input type="datetime-local" class="form-control" id="mac_tarihi" name="mac_tarihi"
                                value="{{ tarih_formatted or '' }}">
-                        <div class="form-text">Maç tarihini ve saatini düzenleyebilirsiniz</div>
+                        <div class="form-text">
+                            {% if tarih_okunabilir %}
+                                <i class="fas fa-calendar-alt me-1"></i>Mevcut: {{ tarih_okunabilir }}
+                            {% else %}
+                                <i class="fas fa-info-circle me-1"></i>Tarih belirtilmemiş
+                            {% endif %}
+                        </div>
                     </div>
 
                     <div class="row">
@@ -48,7 +54,9 @@
                             <label for="gercek_skor" class="form-label">Gerçek Skor</label>
                             <input type="text" class="form-control" id="gercek_skor" name="gercek_skor" 
                                    value="{{ mac.gercek_skor or '' }}" placeholder="Örnek: 2-1">
-                            <div class="form-text">Maç bittikten sonra gerçek skoru girin</div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>Maç bittikten sonra gerçek skoru girin
+                            </div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="durum" class="form-label">Maç Durumu</label>
@@ -79,70 +87,103 @@
             <div class="card-body">
                 <ul class="list-unstyled mb-0">
                     <li class="mb-2">
-                        <strong>Mevcut Tarih:</strong><br>
-                        {% if mac.tarih %}
+                        <strong><i class="fas fa-calendar me-1"></i>Mevcut Tarih:</strong><br>
+                        {% if mac.mac_tarihi %}
                             <span class="text-success">{{ tarih_okunabilir }}</span>
                         {% else %}
                             <span class="text-muted">Belirtilmemiş</span>
                         {% endif %}
                     </li>
                     <li class="mb-2">
-                        <strong>Mevcut Skor:</strong><br>
+                        <strong><i class="fas fa-futbol me-1"></i>Mevcut Skor:</strong><br>
                         {% if mac.gercek_skor and mac.gercek_skor != '' %}
-                            <span class="badge bg-success">{{ mac.gercek_skor }}</span>
+                            <span class="badge bg-success fs-6">{{ mac.gercek_skor }}</span>
                         {% else %}
                             <span class="text-muted">Henüz girilmemiş</span>
                         {% endif %}
                     </li>
                     <li>
-                        <strong>Durum:</strong><br>
+                        <strong><i class="fas fa-flag me-1"></i>Durum:</strong><br>
                         {% if mac.durum == 'aktif' %}
-                            <span class="badge bg-success">Aktif</span>
+                            <span class="badge bg-success">🟢 Aktif</span>
                         {% elif mac.durum == 'bitti' %}
-                            <span class="badge bg-secondary">Bitti</span>
+                            <span class="badge bg-secondary">⚫ Bitti</span>
                         {% elif mac.durum == 'iptal' %}
-                            <span class="badge bg-danger">İptal</span>
+                            <span class="badge bg-danger">🔴 İptal</span>
                         {% elif mac.durum == 'ertelendi' %}
-                            <span class="badge bg-warning">Ertelendi</span>
+                            <span class="badge bg-warning text-dark">🟡 Ertelendi</span>
                         {% endif %}
                     </li>
                 </ul>
             </div>
         </div>
 
-        <div class="card mt-3 bg-warning bg-opacity-10">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Önemli Notlar</h6>
+        <!-- ✅ OTOMATIK KAZANAN BELİRLEME UYARISI -->
+        {% if mac.gercek_skor and mac.gercek_skor != '' %}
+        <div class="card mt-3 bg-success bg-opacity-10 border-success">
+            <div class="card-header bg-success bg-opacity-25">
+                <h6 class="mb-0 text-success">
+                    <i class="fas fa-trophy me-2"></i>Maç Sonuçlandı
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                <p class="mb-2">
+                    <strong>Gerçek Skor:</strong> 
+                    <span class="badge bg-success fs-6">{{ mac.gercek_skor }}</span>
+                </p>
+                <div class="alert alert-info py-2 mb-3">
+                    <i class="fas fa-magic me-1"></i>
+                    <small>Skor güncellendiğinde kazananlar otomatik belirlenir!</small>
+                </div>
+                <a href="{{ url_for('kazananlar') }}" class="btn btn-success btn-sm me-2">
+                    <i class="fas fa-trophy me-2"></i>Kazananları Gör
+                </a>
+                <a href="{{ url_for('cekilis_yap', mac_id=mac.id) }}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-dice me-2"></i>Çekiliş Yap
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="card mt-3 bg-warning bg-opacity-10 border-warning">
+            <div class="card-header bg-warning bg-opacity-25">
+                <h6 class="mb-0 text-warning-emphasis">
+                    <i class="fas fa-clock me-2"></i>Maç Devam Ediyor
+                </h6>
             </div>
             <div class="card-body">
-                <ul class="list-unstyled mb-0">
+                <div class="alert alert-warning py-2 mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <small>Gerçek skor girildikten sonra kazananlar otomatik belirlenecek</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card mt-3 bg-light">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Kullanım Kılavuzu</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0 small">
                     <li class="mb-2">
-                        <strong>Gerçek Skor:</strong> Maç bittikten sonra girin
+                        <i class="fas fa-check-circle text-success me-1"></i>
+                        <strong>Gerçek Skor:</strong> "2-1", "0-0", "3-2" formatında
                     </li>
                     <li class="mb-2">
-                        <strong>Format:</strong> "2-1", "0-0", "3-2" şeklinde
+                        <i class="fas fa-check-circle text-success me-1"></i>
+                        <strong>Otomatik:</strong> Skor girince kazananlar belirlenir
                     </li>
                     <li class="mb-2">
-                        <strong>Durum:</strong> Maç durumunu güncelleyin
+                        <i class="fas fa-check-circle text-success me-1"></i>
+                        <strong>Durum:</strong> Maç durumunu güncel tutun
                     </li>
                     <li>
-                        <strong>Kazananlar:</strong> Skor girildikten sonra belirlenebilir
+                        <i class="fas fa-check-circle text-success me-1"></i>
+                        <strong>Çekiliş:</strong> Kazananlar arasından seçim yapın
                     </li>
                 </ul>
             </div>
         </div>
-
-        {% if mac.gercek_skor and mac.gercek_skor != '' %}
-        <div class="card mt-3 bg-success bg-opacity-10">
-            <div class="card-body text-center">
-                <h6><i class="fas fa-trophy me-2"></i>Maç Sonuçlandı</h6>
-                <p class="mb-2">Gerçek Skor: <strong>{{ mac.gercek_skor }}</strong></p>
-                <a href="{{ url_for('kazananlari_belirle', mac_id=mac.id) }}" class="btn btn-success btn-sm">
-                    <i class="fas fa-trophy me-2"></i>Kazananları Belirle
-                </a>
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

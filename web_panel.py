@@ -221,6 +221,10 @@ def mac_ekle():
 
 @app.route('/mac_duzenle/<int:mac_id>', methods=['GET', 'POST'])
 def mac_duzenle(mac_id):
+    """Maç düzenleme - Gerçek skor girildiğinde otomatik kazanan belirleme"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
     if request.method == 'POST':
         takim1 = request.form['takim1']
         takim2 = request.form['takim2']
@@ -232,66 +236,124 @@ def mac_duzenle(mac_id):
         mac_tarihi = mac_tarihi if mac_tarihi != '' else None
         gercek_skor = gercek_skor if gercek_skor != '' else None
         
-        try:
-            cur = mysql.connection.cursor()
+        mac_adi = f"{takim1}-{takim2}"
+        
+        # Eski maç bilgisini al
+        cursor.execute('SELECT gercek_skor, mac_adi FROM maclar WHERE id=%s', (mac_id,))
+        eski_mac = cursor.fetchone()
+        eski_gercek_skor = eski_mac['gercek_skor'] if eski_mac else None
+        eski_mac_adi = eski_mac['mac_adi'] if eski_mac else None
+        
+        # Maçı güncelle
+        cursor.execute('''
+            UPDATE maclar 
+            SET mac_adi=%s, takim1=%s, takim2=%s, mac_tarihi=%s, gercek_skor=%s, durum=%s
+            WHERE id=%s
+        ''', (mac_adi, takim1, takim2, mac_tarihi, gercek_skor, durum, mac_id))
+        
+        # Eğer gerçek skor yeni girildiyse veya değiştiyse, otomatik kazananları belirle
+        if gercek_skor and gercek_skor != eski_gercek_skor:
+            print_colored(f"🎯 Gerçek skor güncellendi: {mac_adi} - {gercek_skor}", Colors.YELLOW)
             
-            # ✅ GÜNCELLEME SORGUSU
-            cur.execute("""
-                UPDATE maclar 
-                SET takim1=%s, takim2=%s, tarih=%s, gercek_skor=%s, durum=%s 
-                WHERE id=%s
-            """, (takim1, takim2, mac_tarihi, gercek_skor, durum, mac_id))
+            # Bu maça tahmin yapan TÜM kullanıcıları bul
+            cursor.execute('''
+                SELECT DISTINCT user_id, username, skor_tahmini, mac_adi
+                FROM tahminler
+                WHERE (mac_id = %s OR mac_adi = %s OR mac_adi = %s) 
+                AND skor_tahmini = %s
+            ''', (mac_id, mac_adi, eski_mac_adi, gercek_skor))
             
-            mysql.connection.commit()
-            cur.close()
+            dogru_tahminler = cursor.fetchall()
             
-            flash('Maç başarıyla güncellendi!', 'success')
-            return redirect(url_for('maclar'))
-            
-        except Exception as e:
-            flash(f'Hata: {str(e)}', 'error')
-            return redirect(url_for('mac_duzenle', mac_id=mac_id))
+            if dogru_tahminler:
+                # Mevcut kazananları temizle
+                cursor.execute('DELETE FROM kazananlar WHERE mac_id = %s', (mac_id,))
+                
+                # Yeni kazananları ekle
+                kazanan_sayisi = 0
+                for tahmin in dogru_tahminler:
+                    user_id, username, skor_tahmini_user, tahmin_mac_adi = tahmin['user_id'], tahmin['username'], tahmin['skor_tahmini'], tahmin['mac_adi']
+                    
+                    # Aynı kullanıcının birden fazla kaydı varsa sadece bir kez ekle
+                    cursor.execute('''
+                        SELECT COUNT(*) as count FROM kazananlar 
+                        WHERE mac_id = %s AND user_id = %s
+                    ''', (mac_id, user_id))
+                    
+                    if cursor.fetchone()['count'] == 0:
+                        cursor.execute('''
+                            INSERT INTO kazananlar (mac_id, user_id, username, dogru_tahmin, cekilis_durumu)
+                            VALUES (%s, %s, %s, %s, 'otomatik')
+                        ''', (mac_id, user_id, username, skor_tahmini_user))
+                        kazanan_sayisi += 1
+                        print_colored(f"✅ Kazanan eklendi: @{username} - {skor_tahmini_user}", Colors.GREEN)
+                
+                # Tahminler tablosundaki mac_id'leri de güncelle
+                cursor.execute('''
+                    UPDATE tahminler 
+                    SET mac_id = %s 
+                    WHERE (mac_adi = %s OR mac_adi = %s) AND mac_id IS NULL
+                ''', (mac_id, mac_adi, eski_mac_adi))
+                
+                flash(f'✅ {mac_adi} maçı güncellendi! {kazanan_sayisi} kazanan otomatik belirlendi!', 'success')
+                print_colored(f"🎉 {kazanan_sayisi} kazanan otomatik belirlendi: {mac_adi} - {gercek_skor}", Colors.GREEN)
+            else:
+                flash(f'✅ {mac_adi} maçı güncellendi! (Doğru tahmin yapan bulunamadı)', 'info')
+                print_colored(f"ℹ️ Doğru tahmin yapan bulunamadı: {mac_adi} - {gercek_skor}", Colors.YELLOW)
+        else:
+            flash(f'✅ {mac_adi} maçı güncellendi!', 'success')
+        
+        conn.commit()
+        conn.close()
+        
+        return redirect(url_for('maclar'))
     
-    # GET request için
-    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT * FROM maclar WHERE id = %s", (mac_id,))
-    mac = cur.fetchone()
-    cur.close()
+    # GET request için - Maç bilgilerini getir
+    cursor.execute('SELECT * FROM maclar WHERE id=%s', (mac_id,))
+    mac = cursor.fetchone()
     
     if not mac:
-        flash('Maç bulunamadı!', 'error')
+        conn.close()
+        flash('❌ Maç bulunamadı!', 'error')
         return redirect(url_for('maclar'))
     
     # ✅ TARİH FORMATINI HAZIRLA
     tarih_formatted = ''
     tarih_okunabilir = ''
     
-    if mac['tarih']:
+    if mac['mac_tarihi']:
         try:
-            if isinstance(mac['tarih'], str):
-                # String ise datetime'a çevir
-                from datetime import datetime
-                if 'T' in mac['tarih']:
-                    dt = datetime.fromisoformat(mac['tarih'].replace('T', ' '))
+            # PostgreSQL'den gelen datetime objesi
+            if hasattr(mac['mac_tarihi'], 'strftime'):
+                # Datetime objesi ise direkt format et
+                tarih_formatted = mac['mac_tarihi'].strftime('%Y-%m-%dT%H:%M')
+                tarih_okunabilir = mac['mac_tarihi'].strftime('%d.%m.%Y %H:%M')
+            elif isinstance(mac['mac_tarihi'], str):
+                # String formatında gelen tarihi işle
+                if 'T' in mac['mac_tarihi']:
+                    # ISO format: 2024-01-15T14:30
+                    dt = datetime.fromisoformat(mac['mac_tarihi'].replace('T', ' ').replace('Z', ''))
+                elif ' ' in mac['mac_tarihi']:
+                    # Normal format: 2024-01-15 14:30:00
+                    dt = datetime.strptime(mac['mac_tarihi'], '%Y-%m-%d %H:%M:%S')
                 else:
-                    dt = datetime.strptime(mac['tarih'], '%Y-%m-%d %H:%M:%S')
+                    # Sadece tarih: 2024-01-15
+                    dt = datetime.strptime(mac['mac_tarihi'], '%Y-%m-%d')
                 
                 tarih_formatted = dt.strftime('%Y-%m-%dT%H:%M')
                 tarih_okunabilir = dt.strftime('%d.%m.%Y %H:%M')
-            else:
-                # Datetime objesi ise direkt format et
-                tarih_formatted = mac['tarih'].strftime('%Y-%m-%dT%H:%M')
-                tarih_okunabilir = mac['tarih'].strftime('%d.%m.%Y %H:%M')
-        except:
-            # Hata durumunda boş bırak
+                
+        except Exception as e:
+            print_colored(f"⚠️ Tarih formatı hatası: {e}", Colors.RED)
             tarih_formatted = ''
-            tarih_okunabilir = 'Geçersiz format'
+            tarih_okunabilir = 'Geçersiz tarih formatı'
+    
+    conn.close()
     
     return render_template('mac_duzenle.html', 
                          mac=mac, 
                          tarih_formatted=tarih_formatted,
                          tarih_okunabilir=tarih_okunabilir)
-
 
 
 @app.route('/tahminler')
