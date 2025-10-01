@@ -87,9 +87,9 @@
                             </td>
                             <td>
                                 {% if mac.tahmin_sayisi > 0 %}
-                                    <a href="{{ url_for('mac_tahminleri', mac_id=mac.id) }}" class="btn btn-sm btn-outline-info">
+                                    <span class="badge bg-info">
                                         <i class="fas fa-users me-1"></i>{{ mac.tahmin_sayisi }}
-                                    </a>
+                                    </span>
                                 {% else %}
                                     <span class="text-muted">0</span>
                                 {% endif %}
