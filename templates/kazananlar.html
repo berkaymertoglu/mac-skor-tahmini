@@ -107,17 +107,47 @@
                             <td><strong>{{ loop.index }}</strong></td>
                             <td>
                                 <i class="fab fa-discord text-primary me-2"></i>
-                                <strong>{{ kazanan[1] }}</strong>
+                                <strong>{{ kazanan.username or kazanan[1] or '-' }}</strong>
                             </td>
-                            <td>{{ kazanan[2] }}</td>
-                            <td><span class="badge bg-success">{{ kazanan[3] }}</span></td>
-                            <td><span class="badge bg-primary">{{ kazanan[4] }}</span></td>
+                            <td>
+                                {% if kazanan.mac_adi %}
+                                    {{ kazanan.mac_adi }}
+                                {% elif kazanan[2] %}
+                                    {{ kazanan[2] }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if kazanan.dogru_tahmin %}
+                                    <span class="badge bg-success">{{ kazanan.dogru_tahmin }}</span>
+                                {% elif kazanan[3] %}
+                                    <span class="badge bg-success">{{ kazanan[3] }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if kazanan.gercek_skor %}
+                                    <span class="badge bg-primary">{{ kazanan.gercek_skor }}</span>
+                                {% elif kazanan[4] %}
+                                    <span class="badge bg-primary">{{ kazanan[4] }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <small class="text-muted">
-                                    {% if kazanan[5] %}
-                                        {{ kazanan[5][:16] }}
+                                    {% if kazanan.mac_tarihi %}
+                                        {% if kazanan.mac_tarihi|string %}
+                                            {{ kazanan.mac_tarihi|string[:16] }}
+                                        {% else %}
+                                            {{ kazanan.mac_tarihi.strftime('%d.%m.%Y %H:%M') if kazanan.mac_tarihi.strftime else kazanan.mac_tarihi }}
+                                        {% endif %}
+                                    {% elif kazanan[5] %}
+                                        {{ kazanan[5][:16] if kazanan[5]|string else kazanan[5] }}
                                     {% else %}
-                                        -
+                                        <span class="text-muted">-</span>
                                     {% endif %}
                                 </small>
                             </td>
@@ -135,4 +165,22 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Debug Bilgisi (Geliştirme için) -->
+{% if config.DEBUG %}
+<div class="card mt-3 bg-light">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-bug me-2"></i>Debug Bilgisi</h6>
+    </div>
+    <div class="card-body">
+        <small>
+            <strong>Kazanan Sayısı:</strong> {{ kazananlar|length if kazananlar else 0 }}<br>
+            {% if kazananlar and kazananlar|length > 0 %}
+                <strong>İlk Kazanan Yapısı:</strong> {{ kazananlar[0]|string }}<br>
+                <strong>Veri Tipi:</strong> {{ kazananlar[0].__class__.__name__ }}
+            {% endif %}
+        </small>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
