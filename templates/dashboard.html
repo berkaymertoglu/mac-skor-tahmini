@@ -113,33 +113,52 @@
                                         <span class="badge bg-light text-dark">{{ mac.takim2 }}</span>
                                     </td>
                                     <td>
-                                        {% if mac.tarih %}
-                                            {{ mac.tarih[:16] }}
+                                        {% if mac.tarih and mac.tarih != '' and mac.tarih != None %}
+                                            {% if mac.tarih is string %}
+                                                {% if mac.tarih|length >= 16 %}
+                                                    {{ mac.tarih[:16].replace('T', ' ') }}
+                                                {% else %}
+                                                    {{ mac.tarih }}
+                                                {% endif %}
+                                            {% else %}
+                                                {{ mac.tarih.strftime('%Y-%m-%d %H:%M') }}
+                                            {% endif %}
                                         {% else %}
                                             <span class="text-muted">Belirtilmemiş</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if mac.gercek_skor %}
+                                        {% if mac.gercek_skor and mac.gercek_skor != '' %}
                                             <span class="badge bg-success">{{ mac.gercek_skor }}</span>
                                         {% else %}
-                                            <span class="badge bg-secondary">Bekleniyor</span>
+                                            <span class="badge bg-warning">Belirtilmemiş</span>
                                         {% endif %}
                                     </td>
                                     <td>
                                         {% if mac.durum == 'aktif' %}
                                             <span class="badge bg-success">Aktif</span>
+                                        {% elif mac.durum == 'bitti' %}
+                                            <span class="badge bg-secondary">Bitti</span>
+                                        {% elif mac.durum == 'iptal' %}
+                                            <span class="badge bg-danger">İptal</span>
+                                        {% elif mac.durum == 'ertelendi' %}
+                                            <span class="badge bg-warning">Ertelendi</span>
                                         {% else %}
                                             <span class="badge bg-secondary">{{ mac.durum }}</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <a href="{{ url_for('mac_tahminleri', mac_id=mac.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ url_for('mac_tahminleri', mac_id=mac.id) }}" class="btn btn-sm btn-outline-primary" title="Tahminleri Gör">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ url_for('mac_duzenle', mac_id=mac.id) }}" class="btn btn-sm btn-outline-warning">
+                                        <a href="{{ url_for('mac_duzenle', mac_id=mac.id) }}" class="btn btn-sm btn-outline-warning" title="Düzenle">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        {% if mac.gercek_skor and mac.gercek_skor != '' %}
+                                        <a href="{{ url_for('kazananlari_belirle', mac_id=mac.id) }}" class="btn btn-sm btn-outline-success" title="Kazananları Belirle">
+                                            <i class="fas fa-trophy"></i>
+                                        </a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
