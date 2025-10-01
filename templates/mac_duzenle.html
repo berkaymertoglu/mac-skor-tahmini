@@ -39,7 +39,8 @@
                     <div class="mb-3">
                         <label for="mac_tarihi" class="form-label">Maç Tarihi ve Saati</label>
                         <input type="datetime-local" class="form-control" id="mac_tarihi" name="mac_tarihi"
-                               value="{% if mac.tarih and mac.tarih != '' and mac.tarih != None %}{% if mac.tarih.strftime %}{{ mac.tarih.strftime('%Y-%m-%dT%H:%M') }}{% else %}{% if mac.tarih|length >= 16 %}{{ mac.tarih[:16] }}{% endif %}{% endif %}{% endif %}">
+                               value="{{ tarih_formatted or '' }}">
+                        <div class="form-text">Maç tarihini ve saatini düzenleyebilirsiniz</div>
                     </div>
 
                     <div class="row">
@@ -71,7 +72,45 @@
     </div>
     
     <div class="col-md-4">
-        <div class="card bg-warning bg-opacity-10">
+        <div class="card bg-info bg-opacity-10">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Maç Bilgileri</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <strong>Mevcut Tarih:</strong><br>
+                        {% if mac.tarih %}
+                            <span class="text-success">{{ tarih_okunabilir }}</span>
+                        {% else %}
+                            <span class="text-muted">Belirtilmemiş</span>
+                        {% endif %}
+                    </li>
+                    <li class="mb-2">
+                        <strong>Mevcut Skor:</strong><br>
+                        {% if mac.gercek_skor and mac.gercek_skor != '' %}
+                            <span class="badge bg-success">{{ mac.gercek_skor }}</span>
+                        {% else %}
+                            <span class="text-muted">Henüz girilmemiş</span>
+                        {% endif %}
+                    </li>
+                    <li>
+                        <strong>Durum:</strong><br>
+                        {% if mac.durum == 'aktif' %}
+                            <span class="badge bg-success">Aktif</span>
+                        {% elif mac.durum == 'bitti' %}
+                            <span class="badge bg-secondary">Bitti</span>
+                        {% elif mac.durum == 'iptal' %}
+                            <span class="badge bg-danger">İptal</span>
+                        {% elif mac.durum == 'ertelendi' %}
+                            <span class="badge bg-warning">Ertelendi</span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-3 bg-warning bg-opacity-10">
             <div class="card-header">
                 <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Önemli Notlar</h6>
             </div>
@@ -93,7 +132,7 @@
             </div>
         </div>
 
-        {% if mac.gercek_skor %}
+        {% if mac.gercek_skor and mac.gercek_skor != '' %}
         <div class="card mt-3 bg-success bg-opacity-10">
             <div class="card-body text-center">
                 <h6><i class="fas fa-trophy me-2"></i>Maç Sonuçlandı</h6>
