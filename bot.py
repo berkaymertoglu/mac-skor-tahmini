@@ -12,6 +12,37 @@ load_dotenv()
 # Logging ayarları
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
+# İzin verilen grup ID'si
+ALLOWED_GROUP_ID = -4820404006
+
+def check_group_permission(func):
+    """Sadece belirli grupta çalışmasını sağlayan decorator"""
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id
+        chat_type = update.effective_chat.type
+        
+        # Eğer DM ise (private chat) cevap verme
+        if chat_type == 'private':
+            await update.message.reply_text(
+                "❌ **Bu bot sadece belirli gruplarda çalışır!**\n\n"
+                "Lütfen yetkili grupta deneyin.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Eğer izin verilen grup değilse cevap verme
+        if chat_id != ALLOWED_GROUP_ID:
+            await update.message.reply_text(
+                "❌ **Bu bot bu grupta çalışma yetkisine sahip değil!**",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # İzin verilen grupta ise normal şekilde çalıştır
+        return await func(update, context)
+    
+    return wrapper
+
 def get_db_connection():
     """PostgreSQL bağlantısı"""
     database_url = os.environ.get('DATABASE_URL')
@@ -69,6 +100,7 @@ def get_user_predictions(user_id):
     conn.close()
     return results
 
+@check_group_permission
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Start komutu handler'ı"""
     welcome_text = """
@@ -88,10 +120,12 @@ Tahminlerinizi kaydetmeye başlayın! 🎯
     """
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
+@check_group_permission
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Hello komutu handler'ı"""
     await update.message.reply_text('⚽ Selam! Skor tahminlerinizi kaydetmek için /skortahmin komutunu kullanın!')
 
+@check_group_permission
 async def skor_tahmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Skor tahmin komutu handler'ı"""
     user_id = update.effective_user.id
@@ -167,6 +201,7 @@ async def skor_tahmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/yardim komutunu kullanarak detaylı bilgi alabilirsiniz."
         )
 
+@check_group_permission
 async def tahminlerim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Kullanıcının tahminlerini göster"""
     user_id = update.effective_user.id
@@ -205,6 +240,7 @@ async def tahminlerim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(message, parse_mode='Markdown')
 
+@check_group_permission
 async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Yardım komutu"""
     help_text = """
