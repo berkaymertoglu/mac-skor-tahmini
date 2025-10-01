@@ -32,51 +32,51 @@
                     <tbody>
                         {% for mac in maclar %}
                         <tr>
-                            <td><strong>#{{ mac[0] }}</strong></td>
-                            <td>{{ mac[1] }}</td>
+                            <td><strong>#{{ mac['id'] }}</strong></td>
+                            <td>{{ mac['mac_adi'] }}</td>
                             <td>
-                                <span class="badge bg-light text-dark me-1">{{ mac[2] }}</span>
+                                <span class="badge bg-light text-dark me-1">{{ mac['takim1'] }}</span>
                                 <span class="text-muted">VS</span>
-                                <span class="badge bg-light text-dark ms-1">{{ mac[3] }}</span>
+                                <span class="badge bg-light text-dark ms-1">{{ mac['takim2'] }}</span>
                             </td>
                             <td>
-                                {% if mac[4] %}
-                                    <small>{{ mac[4][:16] }}</small>
+                                {% if mac['tarih'] %}
+                                    <small>{{ mac['tarih'].strftime('%d.%m.%Y %H:%M') }}</small>
                                 {% else %}
                                     <span class="text-muted">Belirtilmemiş</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if mac[5] %}
-                                    <span class="badge bg-success">{{ mac[5] }}</span>
+                                {% if mac['skor'] %}
+                                    <span class="badge bg-success">{{ mac['skor'] }}</span>
                                 {% else %}
                                     <span class="badge bg-warning">Bekleniyor</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if mac[6] == 'aktif' %}
+                                {% if mac['durum'] == 'aktif' %}
                                     <span class="badge bg-success">Aktif</span>
-                                {% elif mac[6] == 'bitti' %}
+                                {% elif mac['durum'] == 'bitti' %}
                                     <span class="badge bg-secondary">Bitti</span>
                                 {% else %}
-                                    <span class="badge bg-info">{{ mac[6] }}</span>
+                                    <span class="badge bg-info">{{ mac['durum'] }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge bg-primary">{{ mac[7] }} tahmin</span>
+                                <span class="badge bg-primary">{{ mac['tahmin_sayisi'] or 0 }} tahmin</span>
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('mac_tahminleri', mac_id=mac[0]) }}" 
+                                    <a href="{{ url_for('mac_tahminleri', mac_id=mac['id']) }}" 
                                        class="btn btn-sm btn-outline-info" title="Tahminleri Gör">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{{ url_for('mac_duzenle', mac_id=mac[0]) }}" 
+                                    <a href="{{ url_for('mac_duzenle', mac_id=mac['id']) }}" 
                                        class="btn btn-sm btn-outline-warning" title="Düzenle">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    {% if mac[5] %}
-                                        <a href="{{ url_for('kazananlari_belirle', mac_id=mac[0]) }}" 
+                                    {% if mac['skor'] %}
+                                        <a href="{{ url_for('kazananlari_belirle', mac_id=mac['id']) }}" 
                                            class="btn btn-sm btn-outline-success" title="Kazananları Belirle">
                                             <i class="fas fa-trophy"></i>
                                         </a>
@@ -84,9 +84,9 @@
                                     <button type="button" 
                                             class="btn btn-sm btn-outline-danger" 
                                             title="Maçı Sil"
-                                            data-mac-adi="{{ mac[1] }}"
-                                            data-mac-id="{{ mac[0] }}"
-                                            data-tahmin-sayisi="{{ mac[7] }}"
+                                            data-mac-adi="{{ mac['mac_adi'] }}"
+                                            data-mac-id="{{ mac['id'] }}"
+                                            data-tahmin-sayisi="{{ mac['tahmin_sayisi'] or 0 }}"
                                             onclick="confirmDelete(this)">
                                         <i class="fas fa-trash"></i>
                                     </button>
