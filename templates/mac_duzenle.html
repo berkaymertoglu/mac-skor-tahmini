@@ -39,7 +39,7 @@
                     <div class="mb-3">
                         <label for="mac_tarihi" class="form-label">Maç Tarihi ve Saati</label>
                         <input type="datetime-local" class="form-control" id="mac_tarihi" name="mac_tarihi"
-                               value="{% if mac.tarih %}{{ mac.tarih.strftime('%Y-%m-%dT%H:%M') if mac.tarih.strftime else mac.tarih[:16] }}{% endif %}">
+                               value="{% if mac.tarih and mac.tarih != '' and mac.tarih != None %}{% if mac.tarih.strftime %}{{ mac.tarih.strftime('%Y-%m-%dT%H:%M') }}{% else %}{% if mac.tarih|length >= 16 %}{{ mac.tarih[:16] }}{% endif %}{% endif %}{% endif %}">
                     </div>
 
                     <div class="row">
