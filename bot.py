@@ -12,8 +12,9 @@ load_dotenv()
 # Logging ayarları
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# İzin verilen grup ID'si
+# İzin verilen grup ID'si ve Log kanalı
 ALLOWED_GROUP_ID = -4820404006
+LOG_CHANNEL_ID = -4814745228  # Logların gideceği kanal
 
 def check_group_permission(func):
     """Sadece belirli grupta çalışmasını sağlayan decorator"""
@@ -28,6 +29,8 @@ def check_group_permission(func):
                 "Lütfen yetkili grupta deneyin.",
                 parse_mode='Markdown'
             )
+            # Log kanalına bildir
+            await send_log(context, f"🚫 **PRIVATE MESAJ GİRİŞİMİ**\n👤 Kullanıcı: @{update.effective_user.username or update.effective_user.first_name}\n🆔 ID: {update.effective_user.id}")
             return
         
         # Eğer izin verilen grup değilse cevap verme
@@ -36,12 +39,25 @@ def check_group_permission(func):
                 "❌ **Bu bot bu grupta çalışma yetkisine sahip değil!**",
                 parse_mode='Markdown'
             )
+            # Log kanalına bildir
+            await send_log(context, f"🚫 **YETKİSİZ GRUP GİRİŞİMİ**\n🏠 Grup: {update.effective_chat.title}\n🆔 Grup ID: {chat_id}\n👤 Kullanıcı: @{update.effective_user.username or update.effective_user.first_name}")
             return
         
         # İzin verilen grupta ise normal şekilde çalıştır
         return await func(update, context)
     
     return wrapper
+
+async def send_log(context: ContextTypes.DEFAULT_TYPE, message: str):
+    """Log kanalına mesaj gönder"""
+    try:
+        await context.bot.send_message(
+            chat_id=LOG_CHANNEL_ID,
+            text=message,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logging.error(f"Log gönderilemedi: {e}")
 
 def get_db_connection():
     """PostgreSQL bağlantısı"""
@@ -119,11 +135,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 Tahminlerinizi kaydetmeye başlayın! 🎯
     """
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
+    
+    # Log kanalına bildir
+    await send_log(context, f"🚀 **START KOMUTU KULLANILDI**\n👤 Kullanıcı: @{update.effective_user.username or update.effective_user.first_name}\n🆔 ID: {update.effective_user.id}")
 
 @check_group_permission
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Hello komutu handler'ı"""
     await update.message.reply_text('⚽ Selam! Skor tahminlerinizi kaydetmek için /skortahmin komutunu kullanın!')
+    
+    # Log kanalına bildir
+    await send_log(context, f"👋 **HELLO KOMUTU**\n👤 Kullanıcı: @{update.effective_user.username or update.effective_user.first_name}")
 
 @check_group_permission
 async def skor_tahmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -143,6 +165,8 @@ async def skor_tahmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• /skortahmin Türkiye-İtalya 1-1",
             parse_mode='Markdown'
         )
+        # Hatalı kullanım logu
+        await send_log(context, f"❌ **HATALI KULLANIM**\n👤 Kullanıcı: @{username}\n📝 Komut: /skortahmin (argüman yok)")
         return
     
     try:
@@ -183,6 +207,9 @@ async def skor_tahmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await update.message.reply_text(success_message, parse_mode='Markdown')
         
+        # Başarılı tahmin logu
+        await send_log(context, f"✅ **YENİ TAHMİN KAYDEDİLDİ**\n👤 Kullanıcı: @{username}\n🏆 Maç: {mac_adi}\n⚽ Tahmin: {skor_tahmini}\n📅 Tarih: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+        
     except ValueError:
         await update.message.reply_text(
             "❌ **Hatalı format!**\n\n"
@@ -194,12 +221,17 @@ async def skor_tahmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ Skor formatı: sayı-sayı (örn: 2-1, 0-0, 4-3)",
             parse_mode='Markdown'
         )
+        # Format hatası logu
+        await send_log(context, f"❌ **FORMAT HATASI**\n👤 Kullanıcı: @{username}\n📝 Girilen: {' '.join(context.args)}")
+        
     except Exception as e:
         await update.message.reply_text(
             "❌ **Bir hata oluştu!**\n\n"
             "Lütfen tekrar deneyin veya format kontrolü yapın.\n"
             "/yardim komutunu kullanarak detaylı bilgi alabilirsiniz."
         )
+        # Genel hata logu
+        await send_log(context, f"🚨 **SİSTEM HATASI**\n👤 Kullanıcı: @{username}\n❌ Hata: {str(e)}")
 
 @check_group_permission
 async def tahminlerim(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -216,6 +248,8 @@ async def tahminlerim(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/skortahmin Takım1-Takım2 X-Y\n\n"
             "Örnek: /skortahmin Barcelona-Real Madrid 2-1"
         )
+        # Tahmin yok logu
+        await send_log(context, f"📝 **TAHMİN SORGUSU**\n👤 Kullanıcı: @{username}\n📊 Sonuç: Tahmin yok")
         return
     
     message = f"📊 **@{username} - Son Tahminleriniz:**\n\n"
@@ -239,6 +273,9 @@ async def tahminlerim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message += f"🎯 **Toplam Tahmin:** {len(predictions)}"
     
     await update.message.reply_text(message, parse_mode='Markdown')
+    
+    # Tahmin listesi logu
+    await send_log(context, f"📊 **TAHMİN LİSTESİ GÖRÜNTÜLENDI**\n👤 Kullanıcı: @{username}\n📈 Toplam Tahmin: {len(predictions)}")
 
 @check_group_permission
 async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -281,6 +318,9 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     
     await update.message.reply_text(help_text, parse_mode='Markdown')
+    
+    # Yardım komutu logu
+    await send_log(context, f"❓ **YARDIM KOMUTU**\n👤 Kullanıcı: @{update.effective_user.username or update.effective_user.first_name}")
 
 def main():
     """Ana fonksiyon"""
