@@ -98,7 +98,7 @@
                             <th>Maç</th>
                             <th>Tahmin</th>
                             <th>Gerçek Skor</th>
-                            <th>Tarih</th>
+                            <th>Tahmin Tarihi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -138,10 +138,14 @@
                             </td>
                             <td>
                                 <small class="text-muted">
-                                    {% if kazanan.mac_tarihi %}
-                                        {{ kazanan.mac_tarihi.strftime('%d.%m.%Y %H:%M') if kazanan.mac_tarihi else '-' }}
+                                    {% if kazanan.tahmin_tarihi %}
+                                        <i class="fas fa-calendar-alt me-1"></i>
+                                        {{ kazanan.tahmin_tarihi.strftime('%d.%m.%Y') if kazanan.tahmin_tarihi else '-' }}
+                                        <br>
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ kazanan.tahmin_tarihi.strftime('%H:%M') if kazanan.tahmin_tarihi else '-' }}
                                     {% else %}
-                                        -
+                                        <span class="text-muted">-</span>
                                     {% endif %}
                                 </small>
                             </td>
@@ -159,22 +163,4 @@
         {% endif %}
     </div>
 </div>
-
-<!-- Debug Bilgisi (Geliştirme için) -->
-{% if config.DEBUG %}
-<div class="card mt-3 bg-light">
-    <div class="card-header">
-        <h6 class="mb-0"><i class="fas fa-bug me-2"></i>Debug Bilgisi</h6>
-    </div>
-    <div class="card-body">
-        <small>
-            <strong>Kazanan Sayısı:</strong> {{ kazananlar|length if kazananlar else 0 }}<br>
-            {% if kazananlar and kazananlar|length > 0 %}
-                <strong>İlk Kazanan:</strong> {{ kazananlar[0] }}<br>
-                <strong>Veri Tipi:</strong> {{ kazananlar[0].__class__.__name__ }}
-            {% endif %}
-        </small>
-    </div>
-</div>
-{% endif %}
 {% endblock %}
