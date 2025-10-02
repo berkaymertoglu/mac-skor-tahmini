@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Kazanan Ekle - Yönetim Paneli{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-plus me-2"></i>Kazanan Ekle</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('kazananlar') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Geri Dön
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Yeni Kazanan Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <!-- Telegram Kullanıcı Adı -->
+                        <div class="col-md-6 mb-3">
+                            <label for="username" class="form-label">
+                                <i class="fab fa-telegram text-primary me-2"></i>Telegram Kullanıcı Adı
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">@</span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="username" 
+                                       name="username" 
+                                       placeholder="kullanici_adi"
+                                       required>
+                            </div>
+                            <small class="text-muted">@ işareti olmadan yazın</small>
+                        </div>
+
+                        <!-- Site Kullanıcı Adı -->
+                        <div class="col-md-6 mb-3">
+                            <label for="site_username" class="form-label">
+                                <i class="fas fa-globe text-success me-2"></i>Site Kullanıcı Adı
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="site_username" 
+                                   name="site_username" 
+                                   placeholder="site_kullanici_adi">
+                            <small class="text-muted">Opsiyonel</small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Maç Seçimi -->
+                        <div class="col-md-6 mb-3">
+                            <label for="mac_id" class="form-label">
+                                <i class="fas fa-futbol me-2"></i>Maç
+                            </label>
+                            <select class="form-select" id="mac_id" name="mac_id" required>
+                                <option value="">Maç Seçin</option>
+                                {% for mac in maclar %}
+                                <option value="{{ mac.id }}">{{ mac.mac_adi }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Tahmin -->
+                        <div class="col-md-6 mb-3">
+                            <label for="dogru_tahmin" class="form-label">
+                                <i class="fas fa-bullseye me-2"></i>Doğru Tahmin
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="dogru_tahmin" 
+                                   name="dogru_tahmin" 
+                                   placeholder="2-1"
+                                   required>
+                            <small class="text-muted">Örnek: 2-1, 0-0, 3-2</small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Gerçek Skor -->
+                        <div class="col-md-6 mb-3">
+                            <label for="gercek_skor" class="form-label">
+                                <i class="fas fa-trophy me-2"></i>Gerçek Skor
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="gercek_skor" 
+                                   name="gercek_skor" 
+                                   placeholder="2-1">
+                            <small class="text-muted">Opsiyonel - Maçtan otomatik alınabilir</small>
+                        </div>
+
+                        <!-- Tahmin Tarihi -->
+                        <div class="col-md-6 mb-3">
+                            <label for="tahmin_tarihi" class="form-label">
+                                <i class="fas fa-calendar-alt me-2"></i>Tahmin Tarihi
+                            </label>
+                            <input type="datetime-local" 
+                                   class="form-control" 
+                                   id="tahmin_tarihi" 
+                                   name="tahmin_tarihi"
+                                   value="{{ datetime.now().strftime('%Y-%m-%dT%H:%M') }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- User ID -->
+                        <div class="col-md-6 mb-3">
+                            <label for="user_id" class="form-label">
+                                <i class="fas fa-id-card me-2"></i>Telegram User ID
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="user_id" 
+                                   name="user_id" 
+                                   placeholder="123456789">
+                            <small class="text-muted">Opsiyonel - Telegram kullanıcı ID'si</small>
+                        </div>
+
+                        <!-- Çekiliş Durumu -->
+                        <div class="col-md-6 mb-3">
+                            <label for="cekilis_durumu" class="form-label">
+                                <i class="fas fa-dice me-2"></i>Çekiliş Durumu
+                            </label>
+                            <select class="form-select" id="cekilis_durumu" name="cekilis_durumu">
+                                <option value="manuel">Manuel Eklendi</option>
+                                <option value="otomatik">Otomatik Belirlendi</option>
+                                <option value="beklemede">Beklemede</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Açıklama -->
+                    <div class="mb-3">
+                        <label for="aciklama" class="form-label">
+                            <i class="fas fa-comment me-2"></i>Açıklama
+                        </label>
+                        <textarea class="form-control" 
+                                  id="aciklama" 
+                                  name="aciklama" 
+                                  rows="3" 
+                                  placeholder="Opsiyonel açıklama..."></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Kazanan Ekle
+                        </button>
+                        <a href="{{ url_for('kazananlar') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>İptal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yardım Paneli -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Bilgilendirme</h6>
+            </div>
+            <div class="card-body">
+                <h6><i class="fas fa-check-circle text-success me-2"></i>Gerekli Alanlar:</h6>
+                <ul class="list-unstyled mb-3">
+                    <li>• Telegram kullanıcı adı</li>
+                    <li>• Maç seçimi</li>
+                    <li>• Doğru tahmin</li>
+                </ul>
+
+                <h6><i class="fas fa-lightbulb text-warning me-2"></i>İpuçları:</h6>
+                <ul class="list-unstyled mb-3">
+                    <li>• Skor formatı: "2-1", "0-0" şeklinde</li>
+                    <li>• Telegram adında @ kullanmayın</li>
+                    <li>• Site kullanıcı adı opsiyoneldir</li>
+                </ul>
+
+                <h6><i class="fas fa-cog text-secondary me-2"></i>Çekiliş Durumları:</h6>
+                <ul class="list-unstyled">
+                    <li><span class="badge bg-primary me-2">Manuel</span>Elle eklendi</li>
+                    <li><span class="badge bg-success me-2">Otomatik</span>Sistem belirledi</li>
+                    <li><span class="badge bg-warning me-2">Beklemede</span>Çekiliş bekliyor</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

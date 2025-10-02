@@ -7,6 +7,9 @@
     <h1 class="h2"><i class="fas fa-trophy me-2"></i>Kazananlar</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
+            <a href="{{ url_for('kazanan_ekle_manuel') }}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>Kazanan Ekle
+            </a>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
                 <i class="fas fa-sync-alt"></i> Yenile
             </button>
@@ -62,17 +65,17 @@
 </div>
 
 <!-- Çekiliş Sonuçları -->
-{% if cekilis_sonucu %}
+{% if session.get('cekilis_sonucu') %}
 <div class="card mb-4">
     <div class="card-header bg-success text-white">
         <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Son Çekiliş Sonuçları</h5>
     </div>
     <div class="card-body">
         <div class="row">
-            {% for kazanan in cekilis_sonucu %}
+            {% for kazanan in session.get('cekilis_sonucu') %}
             <div class="col-md-4 mb-2">
                 <div class="alert alert-success mb-2">
-                    <i class="fab fa-discord me-2"></i><strong>@{{ kazanan.username }}</strong>
+                    <i class="fab fa-telegram me-2"></i><strong>@{{ kazanan.username }}</strong>
                     <br><small class="text-muted">{{ kazanan.mac_adi }}</small>
                 </div>
             </div>
@@ -94,11 +97,12 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Kullanıcı</th>
+                            <th>Kullanıcı Bilgileri</th>
                             <th>Maç</th>
                             <th>Tahmin</th>
                             <th>Gerçek Skor</th>
                             <th>Tahmin Tarihi</th>
+                            <th>İşlemler</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -106,32 +110,48 @@
                         <tr>
                             <td><strong>{{ loop.index }}</strong></td>
                             <td>
-                                <i class="fab fa-discord text-primary me-2"></i>
-                                <strong>
-                                    {% if kazanan.username %}
-                                        {{ kazanan.username }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </strong>
+                                <!-- Telegram Kullanıcı Adı -->
+                                <div class="mb-1">
+                                    <i class="fab fa-telegram text-primary me-2"></i>
+                                    <strong>
+                                        {% if kazanan.username %}
+                                            @{{ kazanan.username }}
+                                        {% else %}
+                                            <span class="text-muted">Telegram adı yok</span>
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                                
+                                <!-- Site Kullanıcı Adı -->
+                                {% if kazanan.site_username %}
+                                <div>
+                                    <i class="fas fa-globe text-success me-2"></i>
+                                    <span class="badge bg-light text-dark">{{ kazanan.site_username }}</span>
+                                </div>
+                                {% else %}
+                                <div>
+                                    <i class="fas fa-globe text-muted me-2"></i>
+                                    <small class="text-muted">Site adı kayıtlı değil</small>
+                                </div>
+                                {% endif %}
                             </td>
                             <td>
                                 {% if kazanan.mac_adi %}
-                                    {{ kazanan.mac_adi }}
+                                    <strong>{{ kazanan.mac_adi }}</strong>
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if kazanan.dogru_tahmin %}
-                                    <span class="badge bg-success">{{ kazanan.dogru_tahmin }}</span>
+                                    <span class="badge bg-success fs-6">{{ kazanan.dogru_tahmin }}</span>
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if kazanan.gercek_skor %}
-                                    <span class="badge bg-primary">{{ kazanan.gercek_skor }}</span>
+                                    <span class="badge bg-primary fs-6">{{ kazanan.gercek_skor }}</span>
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}
@@ -139,15 +159,27 @@
                             <td>
                                 <small class="text-muted">
                                     {% if kazanan.tahmin_tarihi %}
-                                        <i class="fas fa-calendar-alt me-1"></i>
-                                        {{ kazanan.tahmin_tarihi.strftime('%d.%m.%Y') if kazanan.tahmin_tarihi else '-' }}
-                                        <br>
-                                        <i class="fas fa-clock me-1"></i>
-                                        {{ kazanan.tahmin_tarihi.strftime('%H:%M') if kazanan.tahmin_tarihi else '-' }}
+                                        <div>
+                                            <i class="fas fa-calendar-alt me-1"></i>
+                                            {{ kazanan.tahmin_tarihi.strftime('%d.%m.%Y') if kazanan.tahmin_tarihi else '-' }}
+                                        </div>
+                                        <div>
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ kazanan.tahmin_tarihi.strftime('%H:%M') if kazanan.tahmin_tarihi else '-' }}
+                                        </div>
                                     {% else %}
                                         <span class="text-muted">-</span>
                                     {% endif %}
                                 </small>
+                            </td>
+                            <td>
+                                {% if kazanan.id %}
+                                <button class="btn btn-sm btn-danger" 
+                                        onclick="confirmDelete('{{ kazanan.id }}', '{{ kazanan.username }}')"
+                                        title="Kazananı Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -159,8 +191,51 @@
                 <i class="fas fa-trophy fa-4x text-muted mb-3"></i>
                 <h4 class="text-muted">Henüz kazanan yok</h4>
                 <p class="text-muted">Maçlar tamamlandıkça kazananlar burada görünecek.</p>
+                <a href="{{ url_for('kazanan_ekle_manuel') }}" class="btn btn-success">
+                    <i class="fas fa-plus me-2"></i>İlk Kazananı Ekle
+                </a>
             </div>
         {% endif %}
     </div>
 </div>
+
+<!-- Silme Onay Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Kazananı Sil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bu kazananı silmek istediğinizden emin misiniz?</p>
+                <p><strong id="deleteUsername"></strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <a href="#" id="deleteConfirmBtn" class="btn btn-danger">Sil</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Kullanıcı bilgileri için özel stil */
+.table td:nth-child(2) {
+    min-width: 200px;
+}
+
+/* Badge'leri biraz büyüt */
+.fs-6 {
+    font-size: 0.9rem !important;
+}
+</style>
+
+<script>
+function confirmDelete(kazananId, username) {
+    document.getElementById('deleteUsername').textContent = '@' + username;
+    document.getElementById('deleteConfirmBtn').href = '{{ url_for("kazanan_sil_genel", kazanan_id=0) }}'.replace('0', kazananId);
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
 {% endblock %}

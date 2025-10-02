@@ -16,6 +16,27 @@
         .sidebar .nav-link { color: rgba(255,255,255,0.8); }
         .sidebar .nav-link:hover { color: white; background-color: rgba(255,255,255,0.1); }
         .sidebar .nav-link.active { color: white; background-color: rgba(255,255,255,0.2); }
+        
+        /* Kullanıcı menüsü için ek stiller */
+        .user-menu {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 10px;
+        }
+        .user-menu .dropdown-toggle {
+            color: white !important;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .user-menu .dropdown-toggle:hover {
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 6px;
+        }
+        .user-info {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.7);
+        }
     </style>
 </head>
 <body>
@@ -28,6 +49,47 @@
                         <h4 class="text-white">⚽ Skor Tahmini</h4>
                         <small class="text-white-50">Yönetim Paneli</small>
                     </div>
+                    
+                    <!-- Kullanıcı Bilgileri ve Menüsü -->
+                    {% if current_user %}
+                    <div class="user-menu mb-3">
+                        <div class="dropdown">
+                            <a class="dropdown-toggle d-flex align-items-center" href="#" 
+                               id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-2 fs-5"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">{{ current_user.tam_isim or current_user.kullanici_adi }}</div>
+                                    <div class="user-info">{{ current_user.yetki_seviyesi }}</div>
+                                </div>
+                                <i class="fas fa-chevron-down ms-2"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
+                                <li>
+                                    <h6 class="dropdown-header">
+                                        <i class="fas fa-crown me-1"></i>
+                                        {{ current_user.yetki_seviyesi }}
+                                    </h6>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('change_password') }}">
+                                        <i class="fas fa-key me-2"></i>
+                                        Şifre Değiştir
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                        <i class="fas fa-sign-out-alt me-2"></i>
+                                        Çıkış Yap
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Ana Menü -->
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('dashboard') }}">
@@ -54,31 +116,122 @@
                                 <i class="fas fa-trophy me-2"></i>Kazananlar
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('kazanan_ekle_manuel') }}">
+                                <i class="fas fa-user-plus me-2"></i>Manuel Kazanan Ekle
+                            </a>
+                        </li>
                     </ul>
+                    
+                    <!-- Alt Bilgi -->
+                    <div class="mt-auto pt-4 text-center">
+                        <small class="text-white-50">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Güvenli Oturum
+                        </small>
+                    </div>
                 </div>
             </nav>
 
             <!-- Main content -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="pt-3 pb-2 mb-3">
+                <!-- Üst Bar -->
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">{% block page_title %}Dashboard{% endblock %}</h1>
+                    
+                    <!-- Sağ üst bilgiler -->
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ moment().format('DD.MM.YYYY HH:mm') if moment else '' }}
+                            </small>
+                        </div>
+                        {% if current_user %}
+                        <div class="btn-group">
+                            <span class="badge bg-success">
+                                <i class="fas fa-user-check me-1"></i>
+                                Aktif Oturum
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Flash Mesajları -->
+                <div class="flash-messages">
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
                             {% for category, message in messages %}
-                                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                                <div class="alert alert-{{ 'success' if category == 'success' else 'info' if category == 'info' else 'warning' if category == 'warning' else 'danger' }} alert-dismissible fade show" role="alert">
+                                    {% if category == 'success' %}
+                                        <i class="fas fa-check-circle me-2"></i>
+                                    {% elif category == 'error' %}
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                    {% elif category == 'warning' %}
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                    {% else %}
+                                        <i class="fas fa-info-circle me-2"></i>
+                                    {% endif %}
                                     {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                                 </div>
                             {% endfor %}
                         {% endif %}
                     {% endwith %}
-
-                    {% block content %}{% endblock %}
                 </div>
+
+                <!-- Ana İçerik -->
+                {% block content %}{% endblock %}
             </main>
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="bg-light text-center text-muted py-3 mt-5">
+        <div class="container">
+            <small>
+                © 2024 Maç Skor Tahmini Yönetim Paneli | 
+                <i class="fas fa-code me-1"></i>
+                Güvenli PostgreSQL Bağlantısı
+                {% if current_user %}
+                | Hoş geldiniz, <strong>{{ current_user.tam_isim or current_user.kullanici_adi }}</strong>
+                {% endif %}
+            </small>
+        </div>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Genel JavaScript -->
+    <script>
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+        
+        // Active menu item highlighting
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const menuLinks = document.querySelectorAll('.sidebar .nav-link');
+            
+            menuLinks.forEach(function(link) {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+        
+        // Confirm delete actions
+        function confirmDelete(message) {
+            return confirm(message || 'Bu işlemi gerçekleştirmek istediğinizden emin misiniz?');
+        }
+    </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>

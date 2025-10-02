@@ -14,6 +14,115 @@
     </div>
 </div>
 
+<!-- İstatistikler -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ istatistikler.toplam }}</h4>
+                        <p class="mb-0">Toplam Tahmin</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ istatistikler.dogru }}</h4>
+                        <p class="mb-0">Doğru Tahmin</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ istatistikler.yanlis }}</h4>
+                        <p class="mb-0">Yanlış Tahmin</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-times fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ istatistikler.beklemede }}</h4>
+                        <p class="mb-0">Beklemede</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtreler -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Maç Filtresi</label>
+                <select name="mac" class="form-select">
+                    <option value="">Tüm Maçlar</option>
+                    {% for mac in maclar %}
+                    <option value="{{ mac.mac_adi }}" {{ 'selected' if filters.mac == mac.mac_adi else '' }}>
+                        {{ mac.mac_adi }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Kullanıcı Filtresi</label>
+                <input type="text" name="kullanici" class="form-control" 
+                       placeholder="Telegram veya Site kullanıcı adı" 
+                       value="{{ filters.kullanici }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Durum Filtresi</label>
+                <select name="durum" class="form-select">
+                    <option value="">Tüm Durumlar</option>
+                    <option value="dogru" {{ 'selected' if filters.durum == 'dogru' else '' }}>Doğru</option>
+                    <option value="yanlis" {{ 'selected' if filters.durum == 'yanlis' else '' }}>Yanlış</option>
+                    <option value="beklemede" {{ 'selected' if filters.durum == 'beklemede' else '' }}>Beklemede</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Filtrele
+                    </button>
+                    <a href="{{ url_for('tahminler') }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Temizle
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body">
         {% if tahminler %}
@@ -22,7 +131,8 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Kullanıcı</th>
+                            <th>Telegram</th>
+                            <th>Site Kullanıcı</th>
                             <th>Maç</th>
                             <th>Tahmin</th>
                             <th>Gerçek Skor</th>
@@ -32,29 +142,42 @@
                     </thead>
                     <tbody>
                         {% for tahmin in tahminler %}
-                        <tr class="{{ 'table-success' if tahmin.gercek_skor and tahmin.skor_tahmini == tahmin.gercek_skor else '' }}">
+                        <tr class="{{ 'table-success' if tahmin.tahmin_durumu == 'dogru' else '' }}">
                             <td><strong>#{{ tahmin.id }}</strong></td>
                             <td>
-                                <i class="fab fa-telegram me-1"></i>
-                                <strong>{{ tahmin.username or 'Bilinmeyen' }}</strong>
+                                <i class="fab fa-telegram me-1 text-primary"></i>
+                                <strong>@{{ tahmin.username or 'Bilinmeyen' }}</strong>
                             </td>
-                            <td>{{ tahmin.mac_adi or 'Bilinmeyen' }}</td>
                             <td>
-                                <span class="badge bg-primary">{{ tahmin.skor_tahmini or 'Bilinmeyen' }}</span>
+                                {% if tahmin.site_username %}
+                                    <i class="fas fa-user me-1 text-success"></i>
+                                    <strong>{{ tahmin.site_username }}</strong>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-question-circle me-1"></i>
+                                        Kayıtlı değil
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ tahmin.mac_adi or 'Bilinmeyen' }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary fs-6">{{ tahmin.skor_tahmini or 'Bilinmeyen' }}</span>
                             </td>
                             <td>
                                 {% if tahmin.gercek_skor %}
-                                    <span class="badge bg-success">{{ tahmin.gercek_skor }}</span>
+                                    <span class="badge bg-success fs-6">{{ tahmin.gercek_skor }}</span>
                                 {% else %}
                                     <span class="badge bg-secondary">Bekleniyor</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if tahmin.gercek_skor and tahmin.skor_tahmini == tahmin.gercek_skor %}
+                                {% if tahmin.tahmin_durumu == 'dogru' %}
                                     <span class="badge bg-success">
                                         <i class="fas fa-check me-1"></i>Doğru
                                     </span>
-                                {% elif tahmin.gercek_skor %}
+                                {% elif tahmin.tahmin_durumu == 'yanlis' %}
                                     <span class="badge bg-danger">
                                         <i class="fas fa-times me-1"></i>Yanlış
                                     </span>
@@ -65,7 +188,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <small>
+                                <small class="text-muted">
                                     {% if tahmin.tarih %}
                                         {{ tahmin.tarih.strftime('%d.%m.%Y %H:%M') if tahmin.tarih.strftime else tahmin.tarih[:16] }}
                                     {% else %}
@@ -78,6 +201,38 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Sayfalama -->
+            {% if has_prev or has_next %}
+            <nav aria-label="Tahmin sayfaları">
+                <ul class="pagination justify-content-center">
+                    {% if has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('tahminler', page=prev_num, **filters) }}">
+                                <i class="fas fa-chevron-left"></i> Önceki
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ page }}</span>
+                    </li>
+                    
+                    {% if has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('tahminler', page=next_num, **filters) }}">
+                                Sonraki <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            
+            <div class="text-center text-muted">
+                <small>Toplam {{ total }} tahmin</small>
+            </div>
+            {% endif %}
+
         {% else %}
             <div class="text-center py-5">
                 <i class="fas fa-list fa-4x text-muted mb-3"></i>

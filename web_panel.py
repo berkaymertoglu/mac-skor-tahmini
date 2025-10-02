@@ -5,9 +5,22 @@ import psycopg2.extras
 import json
 import random
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+import hashlib
+from functools import wraps
+from bot import init_database
+
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'mac-tahmin-super-secret-key-2024-render')
+
+# Bu satırı ekleyin:
+@app.context_processor
+def inject_user():
+    """Template'lere kullanıcı bilgilerini enjekte et"""
+    return dict(current_user=get_current_user())
 
 class Colors:
     GREEN = '\033[92m'
@@ -30,58 +43,177 @@ def get_db_connection():
         raise Exception("DATABASE_URL environment variable is required!")
     return psycopg2.connect(database_url, cursor_factory=psycopg2.extras.RealDictCursor)
 
-def init_web_database():
-    """Web panel için PostgreSQL tablolarını oluştur"""
-    print_colored("🗄️ PostgreSQL web panel veritabanı başlatılıyor...", Colors.YELLOW)
+def hash_password(password):
+    """Şifreyi hash'le"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password, hash_value):
+    """Şifreyi doğrula"""
+    return hash_password(password) == hash_value
+
+def login_required(f):
+    """Giriş yapma zorunluluğu decorator'ı"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_current_user():
+    """Mevcut kullanıcı bilgilerini getir"""
+    if 'user_id' not in session:
+        return None
     
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Maçlar tablosu
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS maclar (
-            id SERIAL PRIMARY KEY,
-            mac_adi VARCHAR(200) NOT NULL,
-            takim1 VARCHAR(100) NOT NULL,
-            takim2 VARCHAR(100) NOT NULL,
-            mac_tarihi TIMESTAMP,
-            gercek_skor VARCHAR(20),
-            durum VARCHAR(20) DEFAULT 'aktif',
-            olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+    try:
+        cursor.execute('''
+            SELECT id, kullanici_adi, tam_isim, yetki_seviyesi 
+            FROM yoneticiler 
+            WHERE id = %s AND aktif = true
+        ''', (session['user_id'],))
+        
+        user = cursor.fetchone()
+        return user
+    except Exception as e:
+        print_colored(f"❌ Kullanıcı bilgisi alınamadı: {e}", Colors.RED)
+        return None
+    finally:
+        conn.close()
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Giriş yapma sayfası"""
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
     
-    # Tahminler tablosu
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tahminler (
-            id SERIAL PRIMARY KEY,
-            user_id BIGINT,
-            username VARCHAR(100),
-            mac_adi VARCHAR(200),
-            skor_tahmini VARCHAR(20),
-            mac_id INTEGER REFERENCES maclar(id),
-            tarih TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+    if request.method == 'POST':
+        kullanici_adi = request.form['kullanici_adi'].strip()
+        sifre = request.form['sifre']
+        
+        if not kullanici_adi or not sifre:
+            flash('❌ Kullanıcı adı ve şifre gereklidir!', 'error')
+            return render_template('login.html')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                SELECT id, kullanici_adi, sifre_hash, tam_isim, yetki_seviyesi, aktif
+                FROM yoneticiler 
+                WHERE kullanici_adi = %s
+            ''', (kullanici_adi,))
+            
+            user = cursor.fetchone()
+            
+            if user and user['aktif'] and verify_password(sifre, user['sifre_hash']):
+                # Giriş başarılı
+                session['user_id'] = user['id']
+                session['kullanici_adi'] = user['kullanici_adi']
+                session['tam_isim'] = user['tam_isim']
+                session['yetki_seviyesi'] = user['yetki_seviyesi']
+                
+                # Son giriş tarihini güncelle
+                cursor.execute('''
+                    UPDATE yoneticiler 
+                    SET son_giris = CURRENT_TIMESTAMP 
+                    WHERE id = %s
+                ''', (user['id'],))
+                
+                conn.commit()
+                
+                flash(f'✅ Hoş geldiniz, {user["tam_isim"] or user["kullanici_adi"]}!', 'success')
+                print_colored(f"✅ Giriş yapıldı: {user['kullanici_adi']} ({user['tam_isim']})", Colors.GREEN)
+                
+                return redirect(url_for('dashboard'))
+            else:
+                flash('❌ Geçersiz kullanıcı adı veya şifre!', 'error')
+                print_colored(f"🚫 Başarısız giriş denemesi: {kullanici_adi}", Colors.RED)
+                
+        except Exception as e:
+            flash('❌ Giriş sırasında bir hata oluştu!', 'error')
+            print_colored(f"❌ Giriş hatası: {e}", Colors.RED)
+        finally:
+            conn.close()
     
-    # Kazananlar tablosu
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS kazananlar (
-            id SERIAL PRIMARY KEY,
-            mac_id INTEGER REFERENCES maclar(id),
-            user_id BIGINT,
-            username VARCHAR(100),
-            dogru_tahmin VARCHAR(20),
-            kazanma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            cekilis_durumu VARCHAR(20) DEFAULT 'beklemede'
-        )
-    ''')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Çıkış yapma"""
+    kullanici_adi = session.get('kullanici_adi', 'Bilinmeyen')
+    session.clear()
+    flash('✅ Başarıyla çıkış yaptınız!', 'info')
+    print_colored(f"👋 Çıkış yapıldı: {kullanici_adi}", Colors.YELLOW)
+    return redirect(url_for('login'))
+
+@app.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    """Şifre değiştirme"""
+    if request.method == 'POST':
+        eski_sifre = request.form['eski_sifre']
+        yeni_sifre = request.form['yeni_sifre']
+        yeni_sifre_tekrar = request.form['yeni_sifre_tekrar']
+        
+        if not all([eski_sifre, yeni_sifre, yeni_sifre_tekrar]):
+            flash('❌ Tüm alanları doldurun!', 'error')
+            return render_template('change_password.html')
+        
+        if yeni_sifre != yeni_sifre_tekrar:
+            flash('❌ Yeni şifreler eşleşmiyor!', 'error')
+            return render_template('change_password.html')
+        
+        if len(yeni_sifre) < 6:
+            flash('❌ Yeni şifre en az 6 karakter olmalıdır!', 'error')
+            return render_template('change_password.html')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Mevcut şifreyi kontrol et
+            cursor.execute('''
+                SELECT sifre_hash FROM yoneticiler 
+                WHERE id = %s
+            ''', (session['user_id'],))
+            
+            user = cursor.fetchone()
+            
+            if not user or not verify_password(eski_sifre, user['sifre_hash']):
+                flash('❌ Mevcut şifre yanlış!', 'error')
+                return render_template('change_password.html')
+            
+            # Yeni şifreyi kaydet
+            yeni_sifre_hash = hash_password(yeni_sifre)
+            cursor.execute('''
+                UPDATE yoneticiler 
+                SET sifre_hash = %s 
+                WHERE id = %s
+            ''', (yeni_sifre_hash, session['user_id']))
+            
+            conn.commit()
+            
+            flash('✅ Şifreniz başarıyla değiştirildi!', 'success')
+            print_colored(f"🔐 Şifre değiştirildi: {session['kullanici_adi']}", Colors.GREEN)
+            
+            return redirect(url_for('dashboard'))
+            
+        except Exception as e:
+            conn.rollback()
+            flash('❌ Şifre değiştirme sırasında hata oluştu!', 'error')
+            print_colored(f"❌ Şifre değiştirme hatası: {e}", Colors.RED)
+        finally:
+            conn.close()
     
-    conn.commit()
-    conn.close()
-    print_colored("✅ PostgreSQL web panel veritabanı hazır!", Colors.GREEN)
+    return render_template('change_password.html')
+
 
 @app.route('/')
+@login_required
 def dashboard():
     """Ana dashboard"""
     conn = get_db_connection()
@@ -121,6 +253,7 @@ def dashboard():
     return render_template('dashboard.html', stats=stats, son_maclar=son_maclar)
 
 @app.route('/maclar')
+@login_required
 def maclar():
     """Maç listesi"""
     conn = get_db_connection()
@@ -141,6 +274,7 @@ def maclar():
     return render_template('maclar.html', maclar=maclar_listesi)
 
 @app.route('/mac_sil/<int:mac_id>')
+@login_required
 def mac_sil(mac_id):
     """Maç silme - İlişkili verileri de sil"""
     conn = get_db_connection()
@@ -192,6 +326,7 @@ def mac_sil(mac_id):
     return redirect(url_for('maclar'))
 
 @app.route('/mac_ekle', methods=['GET', 'POST'])
+@login_required
 def mac_ekle():
     """Yeni maç ekleme"""
     if request.method == 'POST':
@@ -220,6 +355,7 @@ def mac_ekle():
     return render_template('mac_ekle.html')
 
 @app.route('/mac_duzenle/<int:mac_id>', methods=['GET', 'POST'])
+@login_required
 def mac_duzenle(mac_id):
     """Maç düzenleme - Gerçek skor girildiğinde otomatik kazanan belirleme"""
     conn = get_db_connection()
@@ -357,8 +493,9 @@ def mac_duzenle(mac_id):
 
 
 @app.route('/tahminler')
+@login_required
 def tahminler():
-    """Geliştirilmiş tahminler sayfası"""
+    """Geliştirilmiş tahminler sayfası - Site kullanıcı adı ile"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -372,10 +509,11 @@ def tahminler():
     kullanici_filter = request.args.get('kullanici', '')
     durum_filter = request.args.get('durum', '')
     
-    # Base query
+    # Base query - Site kullanıcı adı ile birleştir
     query = '''
         SELECT t.id, t.username, t.mac_adi, t.skor_tahmini, t.tarih, 
                m.gercek_skor, m.durum,
+               k.site_username,
                CASE 
                    WHEN m.gercek_skor IS NULL THEN 'beklemede'
                    WHEN t.skor_tahmini = m.gercek_skor THEN 'dogru'
@@ -383,6 +521,7 @@ def tahminler():
                END as tahmin_durumu
         FROM tahminler t 
         LEFT JOIN maclar m ON (t.mac_id = m.id OR t.mac_adi = m.mac_adi)
+        LEFT JOIN kullanicilar k ON t.user_id = k.user_id
         WHERE 1=1
     '''
     
@@ -394,7 +533,8 @@ def tahminler():
         params.append(f'%{mac_filter}%')
     
     if kullanici_filter:
-        query += ' AND t.username ILIKE %s'
+        query += ' AND (t.username ILIKE %s OR k.site_username ILIKE %s)'
+        params.append(f'%{kullanici_filter}%')
         params.append(f'%{kullanici_filter}%')
     
     if durum_filter:
@@ -405,11 +545,12 @@ def tahminler():
         elif durum_filter == 'beklemede':
             query += ' AND m.gercek_skor IS NULL'
     
-    # Toplam sayıyı al
+    # Toplam sayıyı al (count query'yi de güncelle)
     count_query = '''
         SELECT COUNT(*)
         FROM tahminler t 
         LEFT JOIN maclar m ON (t.mac_id = m.id OR t.mac_adi = m.mac_adi)
+        LEFT JOIN kullanicilar k ON t.user_id = k.user_id
         WHERE 1=1
     '''
     
@@ -419,7 +560,8 @@ def tahminler():
         count_params.append(f'%{mac_filter}%')
     
     if kullanici_filter:
-        count_query += ' AND t.username ILIKE %s'
+        count_query += ' AND (t.username ILIKE %s OR k.site_username ILIKE %s)'
+        count_params.append(f'%{kullanici_filter}%')
         count_params.append(f'%{kullanici_filter}%')
     
     if durum_filter:
@@ -440,7 +582,7 @@ def tahminler():
     cursor.execute(query, params)
     tahminler_listesi = cursor.fetchall()
     
-    # İstatistikler
+    # İstatistikler (değişmedi)
     stats_query = '''
         SELECT 
             COUNT(*) as toplam,
@@ -482,7 +624,9 @@ def tahminler():
                              'durum': durum_filter
                          })
 
+
 @app.route('/mac_tahminleri/<int:mac_id>')
+@login_required
 def mac_tahminleri(mac_id):
     """Belirli bir maçın tahminleri"""
     conn = get_db_connection()
@@ -516,6 +660,7 @@ def mac_tahminleri(mac_id):
                          dogru_tahminler=dogru_tahminler)
 
 @app.route('/kazananlari_belirle/<int:mac_id>')
+@login_required
 def kazananlari_belirle(mac_id):
     """Kazananları otomatik belirle"""
     conn = get_db_connection()
@@ -559,23 +704,26 @@ def kazananlari_belirle(mac_id):
     return redirect(url_for('kazananlar', mac_id=mac_id))
 
 @app.route('/kazananlar')
+@login_required
 def kazananlar():
-    """Kazananlar sayfası"""
+    """Kazananlar sayfası - Site kullanıcı adı ile"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Kazananları getir - tahminler tablosundaki tarih alanını dahil et
+    # Kazananları getir - site kullanıcı adı ile birleştir
     cursor.execute('''
         SELECT 
             t.id,
             t.username,
+            COALESCE(k.site_username, '') as site_username,
             t.mac_adi,
             t.skor_tahmini as dogru_tahmin,
             m.gercek_skor,
-            t.tarih as tahmin_tarihi,  -- Bu satır eklendi
+            t.tarih as tahmin_tarihi,
             m.mac_tarihi
         FROM tahminler t
         LEFT JOIN maclar m ON t.mac_adi = m.mac_adi
+        LEFT JOIN kullanicilar k ON t.user_id = k.user_id
         WHERE m.gercek_skor IS NOT NULL 
         AND t.skor_tahmini = m.gercek_skor
         ORDER BY t.tarih DESC
@@ -593,7 +741,12 @@ def kazananlar():
                          toplam_kazanan=toplam_kazanan)
 
 
+
+
+
+
 @app.route('/cekilis_yap_genel', methods=['POST'])
+@login_required
 def cekilis_yap_genel():
     """Genel çekiliş"""
     kazanan_sayisi = int(request.form['kazanan_sayisi'])
@@ -646,6 +799,7 @@ def cekilis_yap_genel():
     return redirect(url_for('kazananlar'))
 
 @app.route('/cekilis_yap/<int:mac_id>', methods=['GET', 'POST'])
+@login_required
 def cekilis_yap(mac_id):
     """Geliştirilmiş çekiliş yapma"""
     conn = get_db_connection()
@@ -732,46 +886,139 @@ def cekilis_yap(mac_id):
                          uygun_kazanan_sayisi=uygun_kazanan_sayisi,
                          tum_kazananlar=tum_kazananlar)
 
-@app.route('/kazanan_ekle/<int:mac_id>', methods=['POST'])
-def kazanan_ekle(mac_id):
-    """Manuel kazanan ekleme"""
-    username = request.form['username']
-    user_id = request.form.get('user_id', 0)
-    
+@app.route('/kazanan_ekle_manuel', methods=['GET', 'POST'])
+@login_required
+def kazanan_ekle_manuel():
+    """Manuel kazanan ekleme sayfası"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute('''
-        INSERT INTO kazananlar (mac_id, user_id, username, dogru_tahmin, cekilis_durumu)
-        VALUES (%s, %s, %s, 'Manuel Eklendi', 'manuel')
-    ''', (mac_id, user_id, username))
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        site_username = request.form.get('site_username', '').strip()
+        mac_id = int(request.form['mac_id'])
+        dogru_tahmin = request.form['dogru_tahmin'].strip()
+        gercek_skor = request.form.get('gercek_skor', '').strip()
+        tahmin_tarihi = request.form.get('tahmin_tarihi', '')
+        user_id = request.form.get('user_id', '')
+        cekilis_durumu = request.form.get('cekilis_durumu', 'manuel')
+        aciklama = request.form.get('aciklama', '').strip()
+        
+        # Değer kontrolü
+        user_id = int(user_id) if user_id else None
+        gercek_skor = gercek_skor if gercek_skor else None
+        site_username = site_username if site_username else None
+        tahmin_tarihi = tahmin_tarihi if tahmin_tarihi else datetime.now()
+        
+        try:
+            # Maç bilgisini al
+            cursor.execute('SELECT mac_adi, gercek_skor FROM maclar WHERE id=%s', (mac_id,))
+            mac_info = cursor.fetchone()
+            
+            if not mac_info:
+                flash('❌ Seçilen maç bulunamadı!', 'error')
+                return redirect(url_for('kazanan_ekle_manuel'))
+            
+            mac_adi = mac_info['mac_adi']
+            mac_gercek_skor = gercek_skor or mac_info['gercek_skor']
+            
+            # User ID yoksa rastgele bir ID oluştur
+            if not user_id:
+                import time
+                user_id = int(time.time() * 1000) % 1000000000
+            
+            # Önce tahminler tablosuna ekle
+            cursor.execute('''
+                INSERT INTO tahminler (user_id, username, mac_id, mac_adi, skor_tahmini, tarih)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (user_id, username, mac_id, mac_adi, dogru_tahmin, tahmin_tarihi))
+            
+            tahmin_id = cursor.fetchone()['id']
+            
+            # Site kullanıcı adını kullanicilar tablosuna ekle/güncelle
+            if site_username:
+                cursor.execute('''
+                    INSERT INTO kullanicilar (user_id, telegram_username, site_username, kayit_tarihi)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (user_id) 
+                    DO UPDATE SET 
+                        site_username = EXCLUDED.site_username,
+                        telegram_username = EXCLUDED.telegram_username,
+                        kayit_tarihi = EXCLUDED.kayit_tarihi
+                ''', (user_id, username, site_username, datetime.now()))
+                
+                print_colored(f"✅ Site kullanıcı adı kaydedildi: {site_username}", Colors.GREEN)
+            
+            conn.commit()
+            
+            flash(f'✅ @{username} başarıyla kazanan olarak eklendi! ({mac_adi})', 'success')
+            print_colored(f"✅ Manuel kazanan eklendi: @{username} - {mac_adi} - {dogru_tahmin}", Colors.GREEN)
+            
+            return redirect(url_for('kazananlar'))
+            
+        except Exception as e:
+            conn.rollback()
+            flash(f'❌ Kazanan eklenirken hata oluştu: {str(e)}', 'error')
+            print_colored(f"❌ Manuel kazanan ekleme hatası: {str(e)}", Colors.RED)
     
-    conn.commit()
+    # GET request - Form sayfasını göster
+    cursor.execute('SELECT id, mac_adi, takim1, takim2, gercek_skor FROM maclar ORDER BY olusturma_tarihi DESC')
+    maclar_listesi = cursor.fetchall()
+    
     conn.close()
     
-    flash(f'✅ @{username} manuel olarak kazanan listesine eklendi!', 'success')
+    return render_template('kazanan_ekle.html', maclar=maclar_listesi, datetime=datetime)
+
+
+
+@app.route('/kazanan_sil_genel/<int:kazanan_id>')
+@login_required
+def kazanan_sil_genel(kazanan_id):
+    """Genel kazanan silme - tahminler tablosundan da sil"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Kazanan bilgisini al
+        cursor.execute('''
+            SELECT t.id as tahmin_id, t.username, t.mac_adi, t.user_id
+            FROM tahminler t
+            WHERE t.id = %s
+        ''', (kazanan_id,))
+        
+        kazanan_info = cursor.fetchone()
+        
+        if kazanan_info:
+            username = kazanan_info['username']
+            mac_adi = kazanan_info['mac_adi']
+            
+            # Tahminler tablosundan sil
+            cursor.execute('DELETE FROM tahminler WHERE id = %s', (kazanan_id,))
+            
+            # Kazananlar tablosundan da sil (eğer varsa)
+            cursor.execute('DELETE FROM kazananlar WHERE user_id = %s AND username = %s', 
+                         (kazanan_info['user_id'], username))
+            
+            conn.commit()
+            flash(f'✅ @{username} kazanan listesinden çıkarıldı! ({mac_adi})', 'success')
+            print_colored(f"🗑️ Kazanan silindi: @{username} - {mac_adi}", Colors.RED)
+        else:
+            flash('❌ Kazanan bulunamadı!', 'error')
+            
+    except Exception as e:
+        conn.rollback()
+        flash(f'❌ Kazanan silinirken hata oluştu: {str(e)}', 'error')
+        print_colored(f"❌ Kazanan silme hatası: {str(e)}", Colors.RED)
+    
+    finally:
+        conn.close()
+    
     return redirect(url_for('kazananlar'))
 
-@app.route('/kazanan_sil/<int:kazanan_id>')
-def kazanan_sil(kazanan_id):
-    """Kazanan silme"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT mac_id, username FROM kazananlar WHERE id=%s', (kazanan_id,))
-    kazanan_info = cursor.fetchone()
-    
-    cursor.execute('DELETE FROM kazananlar WHERE id=%s', (kazanan_id,))
-    conn.commit()
-    conn.close()
-    
-    if kazanan_info:
-        flash(f'✅ @{kazanan_info["username"]} kazanan listesinden çıkarıldı!', 'success')
-        return redirect(url_for('kazananlar'))
-    
-    return redirect(url_for('kazananlar'))
 
 @app.route('/api/stats')
+@login_required
 def api_stats():
     """API - İstatistikler"""
     conn = get_db_connection()
@@ -799,9 +1046,8 @@ if __name__ == '__main__':
     print_colored("🌐 PostgreSQL Web Yönetim Paneli Başlatılıyor...", Colors.CYAN + Colors.BOLD)
     print_colored("="*50, Colors.CYAN)
     
-    # Veritabanını başlat
-    init_web_database()
-    
+    init_database()
+
     # Production için port ayarı
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV') != 'production'
@@ -813,6 +1059,3 @@ if __name__ == '__main__':
         print_colored("="*50, Colors.CYAN)
     
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
-
-        
-        #
